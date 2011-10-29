@@ -63,9 +63,7 @@ class Stratagem:
         self._stobjectnew(self._key)
         self._stenableerrordisplay(False)
 
-        self._layers = {} # layer: index
-        self._substrate = None
-        self._experiments = {} # analyzed experiments
+        self.reset()
 
     def _stobjectnew(self, key):
         bNormal_ = c.c_bool(True)
@@ -93,6 +91,9 @@ class Stratagem:
         Resets all parameters to the defaults, remove all layers and experiments.
         """
         self._lib.StObjectReset(self._key)
+        self._layers = {} # layer: index
+        self._substrate = None
+        self._experiments = {} # analyzed experiments
 
     def add_layer(self, layer, substrate=False):
         """
@@ -179,11 +180,13 @@ class Stratagem:
         """
         nra_ = c.c_int(experiment.z)
         klm_ = c.c_int(experiment.line)
+        hv_ = c.c_double(experiment.hv)
         iElt_ = c.c_int()
         iLine_ = c.c_int()
-        l.debug('StEdAddNrAtomLine(key, %i, %i)', experiment.z, experiment.line)
-        if not self._lib.StEdAddNrAtomLine(self._key, nra_, klm_,
-                                           c.byref(iElt_), c.byref(iLine_)):
+        iExpK_ = c.c_int()
+        l.debug('StEdAddNrAtomLineHV(key, %i, %i)', experiment.z, experiment.line)
+        if not self._lib.StEdAddNrAtomLineHV(self._key, nra_, klm_, hv_,
+                                             c.byref(iElt_), c.byref(iLine_), c.byref(iExpK_)):
             raise RuntimeError, "Cannot add atomic number and line"
 
         analyzed = experiment.is_analyzed()
@@ -192,18 +195,10 @@ class Stratagem:
         if not self._lib.StEdSetAnalyzedFlag(self._key, iElt_, analyzed_):
             raise RuntimeError, "Cannot add experiment analyzed flag"
 
-        l.debug('StEdGetNbExpKs(key, %i, %i)', iElt_.value, iLine_.value)
-        iExpK = self._lib.StEdGetNbExpKs(self._key, iElt_, iLine_)
-        iExpK_ = c.c_int(iExpK)
-
-        l.debug("StEdAddExpK(key, %i, %i, %i)", iElt_.value, iLine_.value, iExpK)
-        if not self._lib.StEdAddExpK(self._key, iElt_, iLine_, iExpK_):
-            raise RuntimeError, "Cannot add experiment k-ratio"
-
         hv_ = c.c_double(experiment.hv)
         kratio_ = c.c_double(experiment.kratio)
         l.debug("StEdSetExpK(key, %i, %i, %i, %f, %f, %f, 0.0, 2)",
-                iElt_.value, iLine_.value, iExpK, experiment.hv,
+                iElt_.value, iLine_.value, iExpK_.value, experiment.hv,
                 experiment.hv, experiment.kratio)
         if not self._lib.StEdSetExpK(self._key, iElt_, iLine_, iExpK_,
                                      hv_, hv_, kratio_, c.c_double(0.0),

@@ -200,13 +200,13 @@ class TestStratagem(unittest.TestCase):
         stdHv_ = c.c_double()
         k_ = c.c_double()
         kr_ = c.c_double()
-        self.s._lib.StEdGetExpK(self.s._key, c.c_int(0), c.c_int(0), c.c_int(0),
+        self.s._lib.StEdGetExpK(self.s._key, c.c_int(0), c.c_int(0), c.c_int(1),
                                 c.byref(hv_), c.byref(stdHv_), c.byref(k_),
                                 c.byref(kr_), c.byref(c.c_int()))
         self.assertAlmostEqual(25.0, hv_.value, 3)
         self.assertAlmostEqual(0.5, k_.value, 3)
 
-        self.s._lib.StEdGetExpK(self.s._key, c.c_int(0), c.c_int(0), c.c_int(1),
+        self.s._lib.StEdGetExpK(self.s._key, c.c_int(0), c.c_int(0), c.c_int(0),
                                 c.byref(hv_), c.byref(stdHv_), c.byref(k_),
                                 c.byref(kr_), c.byref(c.c_int()))
         self.assertAlmostEqual(20.0, hv_.value, 3)
