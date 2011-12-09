@@ -246,8 +246,8 @@ class Stratagem:
 
     def compute_kratio_vs_thickness(self, layer, thickness_low, thickness_high, step):
         """
-        Computes the variation of the k-ratio as a function of the mass 
-        thickness for a layer.
+        Computes the variation of the k-ratio as a function of the thickness 
+        for a layer.
         
         :arg layer: layer (must have been previously added)
         :arg thickness_low: lower limit of the thickness (in nm)
@@ -301,11 +301,69 @@ class Stratagem:
 
         return thicknesses, kratios
 
+    def compute_kratio_vs_energy(self, energy_high, step):
+        """
+        Computes the variation of the k-ratio as a function of the incident
+        energy. 
+        Note that the computation also starts at 0 keV up to the specified energy.
+        
+        :arg energy_high: upper limit of the thickness (in keV)
+        :arg step: number of steps
+        
+        :return: :class:`list` of energies, :class:`dict` of experiment-kratios
+        """
+        step_ = c.c_int(step)
+        l.debug('StSetNbComputedHV(%i)', step)
+        self._lib.StSetNbComputedHV(step_)
+
+        energy_ = c.c_double(energy_high)
+        l.debug('StSetMaxHV(%f)' % energy_high)
+        self._lib.StSetMaxHV(energy_)
+
+        # Compute
+        l.debug('StComputeKvsHV(key)')
+        if not self._lib.StComputeKvsHV(self._key):
+            raise StratagemError, "Cannot compute k-ratio vs energy"
+
+        # Fetch results
+        energies = []
+        kratios = {}
+
+        k_ = c.c_double()
+        bHV_ = c.c_bool(True)
+        increment = float(energy_high) / step
+
+        for i in range(step + 1):
+            hv = i * increment
+            hv_ = c.c_double(hv)
+
+            for experiment, indexes in self._experiments.iteritems():
+                iElt_ = c.c_int(indexes[0])
+                iLine_ = c.c_int(indexes[1])
+
+                if not self._lib.StKvsHvOrRx(self._key, iElt_, iLine_, hv_, bHV_, c.byref(k_)):
+                    raise StratagemError, "Cannot get k-ratio"
+
+                kratios.setdefault(experiment, []).append(k_.value)
+
+            energies.append(hv)
+
+        return energies, kratios
+
     def compute_kratios(self):
         """
         Computes the kratios of the different experiments.
         
         :return: :class:`dict` of experiment-kratios
+        """
+        if len(self._layers) == 0:
+            return self._compute_kratios_substrate()
+        else:
+            return self._compute_kratios_multilayers()
+
+    def _compute_kratios_multilayers(self):
+        """
+        Computes the kratios using the :meth:`compute_kratio_vs_thickness`.
         """
         for i, layer in enumerate(self._layers.keys()):
             if not layer.is_thickness_known():
@@ -324,6 +382,23 @@ class Stratagem:
         output = {}
         for experiment, kratio in kratios.iteritems():
             output.setdefault(experiment, kratio[0])
+
+        return output
+
+    def _compute_kratios_substrate(self):
+        """
+        Computes the kratios using the :meth:`compute_kratio_vs_energy`.
+        """
+        output = {}
+
+        step = 2
+        for experiment in self._experiments:
+            energy_high = experiment.hv
+
+            _energies, kratios = \
+                self.compute_kratio_vs_energy(energy_high, step)
+
+            output.setdefault(experiment, kratios[experiment][-1])
 
         return output
 
@@ -375,4 +450,5 @@ class Stratagem:
             thicknesses.setdefault(layer, thickness.value / 10)
 
         return thicknesses
+
 

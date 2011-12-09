@@ -82,6 +82,20 @@ class TestStratagem(unittest.TestCase):
 
         return film, subs, exp0, exp1
 
+    def _setup_substrate(self):
+        subs = Layer({13: 0.5, 79: 0.5})
+        self.s.add_substrate(subs)
+
+        exp0 = Experiment(13, LINE_KA, 10.0)
+        self.s.add_experiment(exp0)
+
+        exp1 = Experiment(79, LINE_MA, 10.0)
+        self.s.add_experiment(exp1)
+
+        self.s.set_geometry(40.0 / 180 * math.pi, 0.0, 0.0)
+
+        return subs, exp0, exp1
+
     def testadd_layer(self):
         layer = Layer({13: 0.2, 29: 0.8}, mass_thickness=3.55, density=2.7)
         self.s.add_layer(layer)
@@ -264,6 +278,25 @@ class TestStratagem(unittest.TestCase):
         self.assertEqual(11, len(kratios[exp0]))
         self.assertEqual(11, len(kratios[exp1]))
 
+    def testcompute_kratio_vs_energy(self):
+        _film, _subs, exp0, exp1 = self._setup_known_thickness()
+
+        energies, kratios = self.s.compute_kratio_vs_energy(30.0, 10)
+
+        exp0_kratios = kratios[exp0]
+        exp1_kratios = kratios[exp1]
+
+        self.assertEqual(11, len(energies))
+        self.assertEqual(2, len(kratios))
+        self.assertEqual(11, len(exp0_kratios))
+        self.assertEqual(11, len(exp1_kratios))
+
+        self.assertAlmostEqual(-1.0, exp0_kratios[0], 3)
+        self.assertAlmostEqual(-1.0, exp1_kratios[0], 3)
+
+        self.assertAlmostEqual(0.0076135, exp0_kratios[-2], 5)
+        self.assertAlmostEqual(0.9819639, exp1_kratios[-2], 5)
+
     def testcompute_kratios(self):
         _film, _subs, exp0, exp1 = self._setup_known_thickness()
 
@@ -273,6 +306,14 @@ class TestStratagem(unittest.TestCase):
         self.assertAlmostEqual(0.008347815, kratios[exp0], 3)
         self.assertAlmostEqual(0.981343858, kratios[exp1], 3)
 
+    def testcompute_kratios_substrate(self):
+        _subs, exp0, exp1 = self._setup_substrate()
+
+        kratios = self.s.compute_kratios()
+
+        self.assertEqual(2, len(kratios))
+        self.assertAlmostEqual(0.4947, kratios[exp0], 3)
+        self.assertAlmostEqual(0.36845, kratios[exp1], 3)
 
     def testcompute_thicknesses(self):
         film, _subs, _exp0, _exp1 = self._setup_unknown_thickness()
