@@ -144,9 +144,9 @@ class Stratagem:
         if not substrate:
             thickKnown = layer.is_thickness_known()
             thickKnown_ = c.c_bool(thickKnown)
-            thickness = layer.thickness * 10
+            thickness = layer.thickness * 10 # Angstroms
             thickness_ = c.c_double(thickness)
-            mass_thickness = layer.mass_thickness / 1e6
+            mass_thickness = layer.mass_thickness / 1e6 # g/cm2
             mass_thickness_ = c.c_double(mass_thickness)
             density = layer.density
             density_ = c.c_double(density)

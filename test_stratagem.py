@@ -141,17 +141,17 @@ class TestStratagem(unittest.TestCase):
                                  c.byref(massThickness), c.byref(thickness),
                                  c.byref(density))
         self.assertFalse(thickKnown.value)
-        self.assertAlmostEqual(0.0, thickness.value / 10, 3)
-        self.assertAlmostEqual(0.0, massThickness.value * 1e6, 3)
+        self.assertAlmostEqual(-1.0, thickness.value / 10, 3)
+        self.assertAlmostEqual(-1.0, massThickness.value * 1e6, 3)
         self.assertAlmostEqual(0.0, density.value, 3)
 
         self.s._lib.StSdGetThick(self.s._key, c.c_int(2), c.byref(thickKnown),
                                  c.byref(massThickness), c.byref(thickness),
                                  c.byref(density))
-        self.assertTrue(thickKnown.value)
-        self.assertAlmostEqual(0.0, thickness.value / 10, 3)
-        self.assertAlmostEqual(0.0, massThickness.value * 1e6, 3)
-        self.assertAlmostEqual(19.28, density.value, 3)
+        self.assertFalse(thickKnown.value)
+        self.assertAlmostEqual(-1.0, thickness.value / 10, 3)
+        self.assertAlmostEqual(-1.0, massThickness.value * 1e6, 3)
+        self.assertAlmostEqual(19.30, density.value, 3)
 
     def testadd_experiment(self):
         self.s.add_experiment(Experiment(29, LINE_KA, 25.0, 0.5))
