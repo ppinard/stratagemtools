@@ -398,7 +398,14 @@ class Stratagem:
             _energies, kratios = \
                 self.compute_kratio_vs_energy(energy_high, step)
 
-            output.setdefault(experiment, kratios[experiment][-1])
+            kratio = kratios[experiment][-1]
+            if (kratio < 0): # Bug in strategem that some energy don't work
+                l.warn("STRATAGem returns a negative k-ratio, re-try with energy + 1 eV")
+                _energies, kratios = \
+                    self.compute_kratio_vs_energy(energy_high + 0.001, step)
+                kratio = kratios[experiment][-1]
+
+            output.setdefault(experiment, kratio)
 
         return output
 
