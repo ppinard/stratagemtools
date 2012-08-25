@@ -323,6 +323,24 @@ class TestStratagem(unittest.TestCase):
         self.assertEqual(1, len(thicknesses))
         self.assertAlmostEqual(20.0, thicknesses[film], 1)
 
+    def testcompute_prz(self):
+        _subs, exp0, _exp1 = self._setup_substrate()
+
+        przs = self.s.compute_prz(None, 100)
+
+        rzs, generated, emitted = przs[exp0]
+        self.assertEqual(100, len(rzs))
+        self.assertEqual(100, len(generated))
+        self.assertEqual(100, len(emitted))
+
+        self.assertAlmostEqual(0.0, rzs[0], 4)
+        self.assertAlmostEqual(1.969945, generated[0], 4)
+        self.assertAlmostEqual(1.969945, emitted[0], 4)
+
+        self.assertAlmostEqual(1.24978e-5, rzs[1], 4)
+        self.assertAlmostEqual(2.23834, generated[1], 4)
+        self.assertAlmostEqual(2.18035, emitted[1], 4)
+
 if __name__ == '__main__': #pragma: no cover
     if os.name == 'nt':
         logging.getLogger().setLevel(logging.DEBUG)

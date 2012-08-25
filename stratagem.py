@@ -22,12 +22,15 @@ __license__ = "GPL v3"
 import ctypes as c
 import logging as l
 from ConfigParser import SafeConfigParser
+from operator import attrgetter
 
 # Third party modules.
 
 # Local modules.
 
 # Globals and constants variables.
+from stratagemtools.layer import DENSITIES, ATOMIC_MASSES
+
 _SECTION_STRATAGEM = "Stratagem"
 _OPTION_DLLPATH = "dllPath"
 
@@ -458,4 +461,91 @@ class Stratagem:
 
         return thicknesses
 
+    def compute_prz(self, maxdepth_m=None, bins=100):
+        """
+        Compute :math:`\\phi(\\rho z)` of all experiments.
+        
+        .. warning::
+        
+           Only available for substrate (no layers).
+        
+        :arg maxdepth_m: maximum depth of the :math:`\\phi(\\rho z)` 
+          distribution in meters. If ``None``, Kanaya-Okayama electron range
+          is used with a safety factor of 1.5.
+        :type maxdepth_m: :class:`float`
+        
+        :arg bins: number of bins in the :math:`\\phi(\\rho z)` distribution
+        :type bins: :class:`int`
+        
+        :return: a :class:`dict` where the keys are the experiments and the 
+            values are a tuple containing three lists:
+            
+                * :math:`\rho z` coordinates (in g/cm2)
+                * generated intensities of :math:`\\phi(\\rho z)` (no absorption)
+                * emitted intensites of :math:`\\phi(\\rho z)`
+        """
+        if len(self._layers) > 0:
+            raise RuntimeError, 'PRZ can only be computed for substrate'
+
+        # Set scaling
+        hvs = map(attrgetter('hv'), self._experiments.keys())
+        maxhv = max(hvs)
+        maxhv_ = c.c_double(maxhv)
+        l.debug('StSetScaleHV(%s)', maxhv)
+        self._lib.StSetScaleHV(maxhv_)
+
+        # Compute
+        l.debug('StComputePrz(key)')
+        if not self._lib.StComputePrz(self._key):
+            raise StratagemError, 'Cannot compute prz'
+
+        # Get values
+        przs = {}
+
+        for experiment, indexes in self._experiments.iteritems():
+            # Size of each bin
+            if maxdepth_m is None:
+                # Calculate max depth using Kanaya-Okayama
+                maxdepth_m = 0.0
+                energy = experiment.hv * 1000.0
+
+                for z, fraction in self._substrate.iter_elements():
+                    dr = (0.0276 * ATOMIC_MASSES[z + 1] * \
+                          (energy / 1000.0) ** 1.67) / \
+                          (z ** 0.89 * DENSITIES[z + 1])
+                    maxdepth_m += fraction / (dr * 1e-6)
+
+                maxdepth_m = 1.0 / maxdepth_m
+                maxdepth_m *= 1.5 # safety factor
+
+            increment = (maxdepth_m * 100.0 * self._substrate.density) / bins
+
+            # Indexes
+            iElt_ = c.c_int(indexes[0])
+            iLine_ = c.c_int(indexes[1])
+            iHV_ = c.c_int(0)
+
+            rzs = []
+            ys_generated = []
+            ys_emitted = []
+
+            for rz in range(bins):
+                rz_ = c.c_double(rz * increment)
+                rzs.append(rz * increment)
+
+                y_ = c.c_double()
+                bUseExp_ = c.c_bool(True)
+                self._lib.StPhiRhoZ(self._key, iElt_, iLine_, iHV_, rz_,
+                                    bUseExp_, c.byref(y_))
+                ys_emitted.append(y_.value)
+
+                y_ = c.c_double()
+                bUseExp_ = c.c_bool(False)
+                self._lib.StPhiRhoZ(self._key, iElt_, iLine_, iHV_, rz_,
+                                    bUseExp_, c.byref(y_))
+                ys_generated.append(y_.value)
+
+            przs.setdefault(experiment, (rzs, ys_generated, ys_emitted))
+
+        return przs
 
