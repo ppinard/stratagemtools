@@ -19,8 +19,6 @@ import math
 # Third party modules.
 
 # Local modules.
-import DrixUtilities.Files as Files
-
 from stratagem import Stratagem
 from layer import Layer
 from experiment import Experiment
@@ -29,8 +27,10 @@ from experiment import Experiment
 from experiment import LINE_KA, LINE_LA, LINE_MA
 from stratagem import PRZMODE_PAP, FLUORESCENCE_NONE
 
-path = Files.getCurrentModulePath(__file__, 'stratagem.cfg')
+path = os.path.join(os.path.dirname(__file__), 'stratagem.cfg')
 path = os.path.abspath(path)
+if not os.path.exists(path):
+    print >> sys.stderr, 'Missing stratagem.cfg'
 
 class TestStratagem(unittest.TestCase):
 
