@@ -154,13 +154,20 @@ class Stratagem:
             thick_known = layer.is_thickness_known()
             thick_known_ = c.c_bool(thick_known)
 
-            density = layer.density or -1.0
+            if layer.is_density_known():
+                density = layer.density_kg_m3 / 1e3 # g/cm3
+            else:
+                density = -1.0
             density_ = c.c_double(density)
 
-            thickness = layer.thickness or -0.1
-            mass_thickness = layer.mass_thickness or -1e6
-            thickness_ = c.c_double(thickness * 10) # Angstroms
-            mass_thickness_ = c.c_double(mass_thickness / 1e6) # g/cm2
+            if thick_known:
+                thickness = layer.thickness_m * 1e10  # Angstroms
+                mass_thickness = layer.mass_thickness_kg_m2 * 0.1 # g/cm2
+            else:
+                thickness = -1.0
+                mass_thickness = -1.0
+            thickness_ = c.c_double(thickness)
+            mass_thickness_ = c.c_double(mass_thickness)
 
             l.debug("StSdSetThick(key, %i, %r, %d, %d, %d)", iLayer_,
                     thick_known, mass_thickness, thickness, density)
@@ -191,7 +198,7 @@ class Stratagem:
         """
         nra_ = c.c_int(experiment.z)
         klm_ = c.c_int(experiment.line)
-        hv_ = c.c_double(experiment.hv)
+        hv_ = c.c_double(experiment.energy_eV / 1e3)
         iElt_ = c.c_int()
         iLine_ = c.c_int()
         iExpK_ = c.c_int()
@@ -206,11 +213,11 @@ class Stratagem:
         if not self._lib.StEdSetAnalyzedFlag(self._key, iElt_, analyzed_):
             raise StratagemError("Cannot add experiment analyzed flag")
 
-        hv_ = c.c_double(experiment.hv)
         kratio_ = c.c_double(experiment.kratio)
         l.debug("StEdSetExpK(key, %i, %i, %i, %f, %f, %f, 0.0, 2)",
-                iElt_.value, iLine_.value, iExpK_.value, experiment.hv,
-                experiment.hv, experiment.kratio)
+                iElt_.value, iLine_.value, iExpK_.value,
+                experiment.energy_eV / 1e3, experiment.energy_eV / 1e3,
+                experiment.kratio)
         if not self._lib.StEdSetExpK(self._key, iElt_, iLine_, iExpK_,
                                      hv_, hv_, kratio_, c.c_double(0.0),
                                      c.c_int(2)):
@@ -252,13 +259,14 @@ class Stratagem:
         l.debug('StSetFluorFlg(%i)', flag)
         self._lib.StSetFluorFlg(flag_)
 
-    def compute_kratio_vs_thickness(self, layer, thickness_low, thickness_high, step):
+    def compute_kratio_vs_thickness(self, layer,
+                                    thickness_low_m, thickness_high_m, step):
         """
         Computes the variation of the k-ratio as a function of the thickness 
         for a layer.
         
         :arg layer: layer (must have been previously added)
-        :arg thickness_low: lower limit of the thickness (in nm)
+        :arg thickness_low_m: lower limit of the thickness (in nm)
         :arg thickness_high: upper limit of the thickness (in nm)
         :arg step: number of steps
         
@@ -277,10 +285,10 @@ class Stratagem:
         self._lib.StSetNbComputedHV(step_)
 
         # Compute
-        low_ = c.c_double(thickness_low)
-        high_ = c.c_double(thickness_high)
+        low_ = c.c_double(thickness_low_m * 1e9)
+        high_ = c.c_double(thickness_high_m * 1e9)
         l.debug('StComputeKvsThickness(key, %i, %f, %f)',
-                iLayer, thickness_low, thickness_high)
+                iLayer, thickness_low_m * 1e9, thickness_high_m * 1e9)
         if not self._lib.StComputeKvsThickness(self._key, iLayer_, low_, high_):
             raise StratagemError("Cannot compute k-ratio vs thickness")
 
@@ -309,13 +317,13 @@ class Stratagem:
 
         return thicknesses, kratios
 
-    def compute_kratio_vs_energy(self, energy_high, step):
+    def compute_kratio_vs_energy(self, energy_high_eV, step):
         """
         Computes the variation of the k-ratio as a function of the incident
         energy. 
         Note that the computation also starts at 0 keV up to the specified energy.
         
-        :arg energy_high: upper limit of the thickness (in keV)
+        :arg energy_high: upper limit of the thickness (in eV)
         :arg step: number of steps
         
         :return: :class:`list` of energies, :class:`dict` of experiment-kratios
@@ -324,8 +332,8 @@ class Stratagem:
         l.debug('StSetNbComputedHV(%i)', step)
         self._lib.StSetNbComputedHV(step_)
 
-        energy_ = c.c_double(energy_high)
-        l.debug('StSetMaxHV(%f)' % energy_high)
+        energy_ = c.c_double(energy_high_eV / 1e3)
+        l.debug('StSetMaxHV(%f)' % (energy_high_eV / 1e3,))
         self._lib.StSetMaxHV(energy_)
 
         # Compute
@@ -339,7 +347,7 @@ class Stratagem:
 
         k_ = c.c_double()
         bHV_ = c.c_bool(True)
-        increment = float(energy_high) / step
+        increment = float(energy_high_eV / 1e3) / step
 
         for i in range(step + 1):
             hv = i * increment
@@ -379,12 +387,13 @@ class Stratagem:
 
         # Compute
         layer = list(self._layers.keys())[0]
-        thickness_low = layer.thickness
-        thickness_high = layer.thickness * 10
+        thickness_low_m = layer.thickness_m
+        thickness_high_m = layer.thickness_m * 10
         step = 1
 
         _thicknesses, kratios = \
-            self.compute_kratio_vs_thickness(layer, thickness_low, thickness_high, step)
+            self.compute_kratio_vs_thickness(layer, thickness_low_m,
+                                             thickness_high_m, step)
 
         # Reorganize results
         output = {}
@@ -401,16 +410,16 @@ class Stratagem:
 
         step = 2
         for experiment in self._experiments:
-            energy_high = experiment.hv
+            energy_high_eV = experiment.energy_eV
 
             _energies, kratios = \
-                self.compute_kratio_vs_energy(energy_high, step)
+                self.compute_kratio_vs_energy(energy_high_eV, step)
 
             kratio = kratios[experiment][-1]
             if (kratio < 0): # Bug in strategem that some energy don't work
                 l.warn("STRATAGem returns a negative k-ratio, re-try with energy + 1 eV")
                 _energies, kratios = \
-                    self.compute_kratio_vs_energy(energy_high + 0.001, step)
+                    self.compute_kratio_vs_energy(energy_high_eV + 1.0, step)
                 kratio = kratios[experiment][-1]
 
             output.setdefault(experiment, kratio)
@@ -481,8 +490,10 @@ class Stratagem:
                                           c.byref(density)):
                 raise StratagemError("Cannot get thickness")
 
-            newlayer = Layer(composition, thickness.value / 10,
-                             mass_thickness.value / 1e6, density.value)
+            newlayer = Layer(composition,
+                             thickness.value / 1e10,
+                             mass_thickness.value * 10.0,
+                             density.value * 1e3)
             layers[layer] = newlayer
 
         return layers
@@ -514,10 +525,10 @@ class Stratagem:
             raise RuntimeError('PRZ can only be computed for substrate')
 
         # Set scaling
-        hvs = map(attrgetter('hv'), self._experiments.keys())
-        maxhv = max(hvs)
-        maxhv_ = c.c_double(maxhv)
-        l.debug('StSetScaleHV(%s)', maxhv)
+        hvs_eV = map(attrgetter('energy_eV'), self._experiments.keys())
+        maxhv_eV = max(hvs_eV)
+        maxhv_ = c.c_double(maxhv_eV / 1e3)
+        l.debug('StSetScaleHV(%s)', maxhv_eV / 1e3)
         self._lib.StSetScaleHV(maxhv_)
 
         # Compute
@@ -533,18 +544,17 @@ class Stratagem:
             if maxdepth_m is None:
                 # Calculate max depth using Kanaya-Okayama
                 maxdepth_m = 0.0
-                energy = experiment.hv * 1000.0
+                energy_keV = experiment.energy_eV / 1e3
 
                 for z, fraction in self._substrate.composition.items():
-                    dr = (0.0276 * ATOMIC_MASSES[z + 1] * \
-                          (energy / 1000.0) ** 1.67) / \
+                    dr = (0.0276 * ATOMIC_MASSES[z + 1] * energy_keV ** 1.67) / \
                           (z ** 0.89 * DENSITIES[z + 1])
                     maxdepth_m += fraction / (dr * 1e-6)
 
                 maxdepth_m = 1.0 / maxdepth_m
                 maxdepth_m *= 1.5 # safety factor
 
-            increment = (maxdepth_m * 100.0 * self._substrate.density) / bins
+            increment_kg_m2 = (maxdepth_m * self._substrate.density_kg_m3) / bins
 
             # Indexes
             iElt_ = c.c_int(indexes[0])
@@ -555,9 +565,9 @@ class Stratagem:
             ys_generated = []
             ys_emitted = []
 
-            for rz in range(bins):
-                rz_ = c.c_double(rz * increment)
-                rzs.append(rz * increment)
+            for i in range(bins):
+                rz_ = c.c_double(i * increment_kg_m2 * 0.1)
+                rzs.append(i * increment_kg_m2)
 
                 y_ = c.c_double()
                 bUseExp_ = c.c_bool(True)

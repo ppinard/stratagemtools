@@ -33,7 +33,7 @@ LINE_MA = 4
 LINE_MB = 5
 
 class Experiment:
-    def __init__(self, z, line, hv, kratio=0.0, analyzed=True):
+    def __init__(self, z, line, energy_eV, kratio=0.0, analyzed=True):
         """
         Creates a new experiment. 
         An experiment indicates the measurement conditions and/or results.
@@ -41,13 +41,13 @@ class Experiment:
         :arg z: atomic number
         :arg line: x-ray characteristic line (use constant)
         :type line: :class:`int`
-        :arg hv: high voltage (in keV)
+        :arg energy_eV: beam energy (in eV)
         :arg kratio: measured k-ratio
         :arg analyzed: whether to use this experiment in the calculations
         """
         self._z = z
         self._line = line
-        self._hv = hv
+        self._energy_eV = energy_eV
         self._kratio = kratio
         self._analyzed = analyzed
 
@@ -72,11 +72,11 @@ class Experiment:
         return self._line
 
     @property
-    def hv(self):
+    def energy_eV(self):
         """
-        Return the beam energy (in keV).
+        Return the beam energy (in eV).
         """
-        return self._hv
+        return self._energy_eV
 
     @property
     def kratio(self):

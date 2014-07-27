@@ -49,16 +49,16 @@ class TestStratagem(unittest.TestCase):
         self.assertTrue(True)
 
     def _setup_known_thickness(self):
-        film = Layer({13:1.0}, thickness=20)
+        film = Layer({13:1.0}, thickness_m=20e-9)
         self.s.add_layer(film)
 
         subs = Layer({79:1.0})
         self.s.add_substrate(subs)
 
-        exp0 = Experiment(13, LINE_KA, 25.0, 0.25)
+        exp0 = Experiment(13, LINE_KA, 25.0e3, 0.25)
         self.s.add_experiment(exp0)
 
-        exp1 = Experiment(79, LINE_MA, 25.0)
+        exp1 = Experiment(79, LINE_MA, 25.0e3)
         self.s.add_experiment(exp1)
 
         self.s.set_geometry(math.radians(40.0), 0.0, 0.0)
@@ -66,16 +66,16 @@ class TestStratagem(unittest.TestCase):
         return film, subs, exp0, exp1
 
     def _setup_unknown_thickness(self):
-        film = Layer({13:1.0}, thickness=None)
+        film = Layer({13:1.0}, thickness_m=None)
         self.s.add_layer(film)
 
         subs = Layer({79:1.0})
         self.s.add_substrate(subs)
 
-        exp0 = Experiment(13, LINE_KA, 25.0, 0.008347815)
+        exp0 = Experiment(13, LINE_KA, 25.0e3, 0.008347815)
         self.s.add_experiment(exp0)
 
-        exp1 = Experiment(79, LINE_MA, 25.0, 0.981343858)
+        exp1 = Experiment(79, LINE_MA, 25.0e3, 0.981343858)
         self.s.add_experiment(exp1)
 
         self.s.set_geometry(math.radians(40.0), 0.0, 0.0)
@@ -86,10 +86,10 @@ class TestStratagem(unittest.TestCase):
         subs = Layer({13: 0.5, 79: 0.5})
         self.s.add_substrate(subs)
 
-        exp0 = Experiment(13, LINE_KA, 10.0)
+        exp0 = Experiment(13, LINE_KA, 10.0e3)
         self.s.add_experiment(exp0)
 
-        exp1 = Experiment(79, LINE_MA, 10.0)
+        exp1 = Experiment(79, LINE_MA, 10.0e3)
         self.s.add_experiment(exp1)
 
         self.s.set_geometry(math.radians(40.0), 0.0, 0.0)
@@ -97,10 +97,11 @@ class TestStratagem(unittest.TestCase):
         return subs, exp0, exp1
 
     def testadd_layer(self):
-        layer = Layer({13: 0.2, 29: 0.8}, mass_thickness=3.55, density=2.7)
+        layer = Layer({13: 0.2, 29: 0.8}, mass_thickness_kg_m2=3.55e-5,
+                      density_kg_m3=2.7e3)
         self.s.add_layer(layer)
 
-        layer = Layer({6: None, 74: None}, thickness=None)
+        layer = Layer({6: None, 74: None}, thickness_m=None)
         self.s.add_layer(layer)
 
         layer = Layer({79:1.0})
@@ -168,13 +169,13 @@ class TestStratagem(unittest.TestCase):
         self.assertAlmostEqual(19.30, density.value, 3)
 
     def testadd_experiment(self):
-        self.s.add_experiment(Experiment(29, LINE_KA, 25.0, 0.5))
-        self.s.add_experiment(Experiment(29, LINE_KA, 20.0, 0.35))
+        self.s.add_experiment(Experiment(29, LINE_KA, 25.0e3, 0.5))
+        self.s.add_experiment(Experiment(29, LINE_KA, 20.0e3, 0.35))
 
-        self.s.add_experiment(Experiment(79, LINE_LA, 20.0, analyzed=False))
+        self.s.add_experiment(Experiment(79, LINE_LA, 20.0e3, analyzed=False))
 
-        self.s.add_experiment(Experiment(79, LINE_MA, 5.0, analyzed=False))
-        self.s.add_experiment(Experiment(79, LINE_MA, 20.0, analyzed=False))
+        self.s.add_experiment(Experiment(79, LINE_MA, 5.0e3, analyzed=False))
+        self.s.add_experiment(Experiment(79, LINE_MA, 20.0e3, analyzed=False))
 
         # Tests
         self.assertEqual(2, self.s._lib.StEdGetNbElts(self.s._key))
@@ -268,7 +269,7 @@ class TestStratagem(unittest.TestCase):
         film, _subs, exp0, exp1 = self._setup_known_thickness()
 
         thicknesses, kratios = \
-            self.s.compute_kratio_vs_thickness(film, 0.0, 100.0, 10)
+            self.s.compute_kratio_vs_thickness(film, 0.0, 100.0e-9, 10)
 
         self.assertEqual(2, self.s._lib.StGetKvsThicknessUnit())
 
@@ -281,7 +282,7 @@ class TestStratagem(unittest.TestCase):
     def testcompute_kratio_vs_energy(self):
         _film, _subs, exp0, exp1 = self._setup_known_thickness()
 
-        energies, kratios = self.s.compute_kratio_vs_energy(30.0, 10)
+        energies, kratios = self.s.compute_kratio_vs_energy(30.0e3, 10)
 
         exp0_kratios = kratios[exp0]
         exp1_kratios = kratios[exp1]
@@ -321,7 +322,7 @@ class TestStratagem(unittest.TestCase):
         layers = self.s.compute()
 
         self.assertEqual(1, len(layers))
-        self.assertAlmostEqual(20.0, layers[film].thickness, 1)
+        self.assertAlmostEqual(20.0e-9, layers[film].thickness_m, 9)
         self.assertAlmostEqual(1.0, layers[film].composition[13], 4)
 
     def testcompute_prz(self):
@@ -339,8 +340,8 @@ class TestStratagem(unittest.TestCase):
         self.assertAlmostEqual(1.969945, emitted[0], 4)
 
         self.assertAlmostEqual(1.24978e-5, rzs[1], 4)
-        self.assertAlmostEqual(2.23834, generated[1], 4)
-        self.assertAlmostEqual(2.18035, emitted[1], 4)
+        self.assertAlmostEqual(2.09664, generated[1], 4)
+        self.assertAlmostEqual(2.07307, emitted[1], 4)
 
 if __name__ == '__main__': #pragma: no cover
     if os.name == 'nt':
