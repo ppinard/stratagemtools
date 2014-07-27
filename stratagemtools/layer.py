@@ -63,57 +63,58 @@ ATOMIC_MASSES = [
 ]
 
 class Layer:
-    def __init__(self, elements={}, thickness=0.0, mass_thickness=0.0, density=0.0):
+
+    def __init__(self, composition={}, thickness=None, mass_thickness=None,
+                 density=None):
         """
         Creates a new layer or substrate.
         
         It is recommended to only specify either the thickness or the mass
         thickness. If both are specified, their value must be correct.
         
-        :arg elements: :class:`dict` of atomic number / weight fraction. 
-            If the concentration is negative, it is unknown.
+        :arg composition: :class:`dict` of atomic number / weight fraction. 
+            If the concentration is ``None``, it is unknown.
         :arg thickness: thickness (in nm).
-            If the thickness is negative, it is unknown.
+            If the thickness is ``None``, it is unknown.
         :arg mass_thickness: mass thickness (in ug/cm2)
-            If the mass thickness is negative, it is unknown.
+            If the mass thickness is ``None``, it is unknown.
         :arg density: density (in g/cm3)
             If the density is less or equal to zero, the weighted density based
             on the concentration is used.
         """
-        self._elements = elements
+        self._composition = composition.copy()
 
-        if density <= 0.0:
-            density = 0.0
-            for z, wf in elements.items():
-                density += DENSITIES[z - 1] * wf
+        if density is None:
+            try:
+                density = 0.0
+                for z, wf in composition.items():
+                    density += DENSITIES[z - 1] * wf
+            except:
+                density = None
         self._density = density
 
-        if thickness <= 0.0 and mass_thickness <= 0.0:
-            thickness = -1.0
-            mass_thickness = -1.0
-        elif thickness > 0.0 and mass_thickness <= 0.0:
+        if thickness is not None and \
+                mass_thickness is None and \
+                density is not None:
             mass_thickness = thickness * density / 10
-        elif thickness <= 0.0 and mass_thickness > 0.0:
+        elif thickness is None and \
+                mass_thickness is not None and \
+                density is not None:
             thickness = mass_thickness / density * 10
-        else:
-            assert thickness == mass_thickness / density * 10
+#        elif thickness is not None and \
+#                mass_thickness is not None and \
+#                density is not None:
+#            assert thickness == mass_thickness / density * 10
 
         self._thickness = thickness
         self._mass_thickness = mass_thickness
 
-    def iter_elements(self):
-        """
-        Iterator over the atomic number and weight fraction.
-        
-        Example::
-        
-          for z, wf in layer.iter_elements():
-            print z, wf
-        """
-        return self._elements.items()
-
     def is_thickness_known(self):
-        return self._thickness >= 0 and self._mass_thickness >= 0
+        return self._thickness is not None and self._mass_thickness is not None
+
+    @property
+    def composition(self):
+        return self._composition.copy()
 
     @property
     def thickness(self):

@@ -29,7 +29,7 @@ from operator import attrgetter
 # Local modules.
 
 # Globals and constants variables.
-from stratagemtools.layer import DENSITIES, ATOMIC_MASSES
+from stratagemtools.layer import Layer, DENSITIES, ATOMIC_MASSES
 
 _SECTION_STRATAGEM = "Stratagem"
 _OPTION_DLLPATH = "dllPath"
@@ -41,6 +41,12 @@ PRZMODE_GAU = 2
 FLUORESCENCE_NONE = 0
 FLUORESCENCE_LINE = 1
 FLUORESCENCE_LINE_CONT = 2
+
+CONCENTRATION_FLAG_KNOWN = 0
+CONCENTRATION_FLAG_UNKNOWN = 1
+CONCENTRATION_FLAG_STOICHIOMETRIC = 2
+CONCENTRATION_FLAG_TRACE = 3
+CONCENTRATION_FLAG_DIFFERENCE = 4
 
 class StratagemError(Exception):
     pass
@@ -118,48 +124,47 @@ class Stratagem:
         if not self._lib.StSdAddLayer(self._key, iLayer_):
             raise StratagemError("Cannot add layer")
 
-        for i, element in enumerate(layer.iter_elements()):
+        for i, value in enumerate(layer.composition.items()):
             iElt_ = c.c_int(i)
             l.debug("StSdAddElt(key, %i, %i)", iLayer_, i)
             if not self._lib.StSdAddElt(self._key, iLayer_, iElt_):
                 raise StratagemError("Cannot add element")
 
-            z, conc = element
+            z, wf = value
             nra_ = c.c_int(z)
             l.debug("StSdSetNrAtom(key, %i, %i, %i)", iLayer_, i, z)
             if not self._lib.StSdSetNrAtom(self._key, iLayer_, iElt_, nra_):
                 raise StratagemError("Cannot set atomic number")
 
-            if conc >= 0:
-                flag = 0
+            if wf is not None:
+                flag = CONCENTRATION_FLAG_KNOWN
 
-                wf_ = c.c_double(conc)
-                l.debug("StSdSetConc(key, %i, %i, %f)", iLayer_, i, conc)
+                wf_ = c.c_double(wf)
+                l.debug("StSdSetConc(key, %i, %i, %f)", iLayer_, i, wf)
                 if not self._lib.StSdSetConc(self._key, iLayer_, iElt_, wf_):
                     raise StratagemError("Cannot set concentration")
             else:
-                flag = 1
+                flag = CONCENTRATION_FLAG_UNKNOWN
 
             l.debug("StSdSetConcFlag(key, %i, %i, %i)", iLayer_, i, flag)
             if not self._lib.StSdSetConcFlag(self._key, iLayer_, iElt_, c.c_int(flag)):
                 raise StratagemError("Cannot set concentration flag")
 
         if not substrate:
-            thickKnown = layer.is_thickness_known()
-            thickKnown_ = c.c_bool(thickKnown)
-            thickness = layer.thickness * 10 # Angstroms
-            thickness_ = c.c_double(thickness)
-            mass_thickness = layer.mass_thickness / 1e6 # g/cm2
-            mass_thickness_ = c.c_double(mass_thickness)
-            density = layer.density
-            density_ = c.c_double(density)
-            if density <= 0.0: # calculate density
-                l.debug('StSdDefaultDensity(key, %i)', iLayer_)
-                self._lib.StSdDefaultDensity(self._key, iLayer_, c.byref(density_))
+            thick_known = layer.is_thickness_known()
+            thick_known_ = c.c_bool(thick_known)
 
-            l.debug("StSdSetThick(key, %i, %r, %d, %d, %d)", iLayer_, thickKnown,
-                    mass_thickness, thickness, density)
-            if not self._lib.StSdSetThick(self._key, iLayer_, thickKnown_,
+            density = layer.density or -1.0
+            density_ = c.c_double(density)
+
+            thickness = layer.thickness or -0.1
+            mass_thickness = layer.mass_thickness or -1e6
+            thickness_ = c.c_double(thickness * 10) # Angstroms
+            mass_thickness_ = c.c_double(mass_thickness / 1e6) # g/cm2
+
+            l.debug("StSdSetThick(key, %i, %r, %d, %d, %d)", iLayer_,
+                    thick_known, mass_thickness, thickness, density)
+            if not self._lib.StSdSetThick(self._key, iLayer_, thick_known_,
                                           mass_thickness_, thickness_, density_):
                 raise StratagemError("Cannot set thickness")
 
@@ -412,7 +417,7 @@ class Stratagem:
 
         return output
 
-    def compute_thicknesses(self, iteration_max=50):
+    def compute(self, iteration_max=50):
         """
         Computes the thicknesses of each layer.
         
@@ -441,25 +446,46 @@ class Stratagem:
                 break
 
         # Fetch results
-        thicknesses = {}
+        layers = {}
 
-        thickKnown = c.c_bool()
-        massThickness = c.c_double()
+        thick_known = c.c_bool()
+        mass_thickness = c.c_double()
         thickness = c.c_double()
         density = c.c_double()
 
         for layer, iLayer in self._layers.items():
             iLayer_ = c.c_int(iLayer)
-            l.debug("StSdGetThick(key, %i)", iLayer)
 
-            if not self._lib.StSdGetThick(self._key, iLayer_, c.byref(thickKnown),
-                                          c.byref(massThickness), c.byref(thickness),
+            l.debug('StSdGetNbElts(key, %i)' % iLayer)
+            nbelt = self._lib.StSdGetNbElts(self._key, iLayer_)
+            if nbelt == -1:
+                raise StratagemError("Cannot get number of elements")
+
+            flag_ = c.c_int()
+            wfs_ = (c.c_double * nbelt)()
+            l.debug('StSdGetLayRawConcs(key, %i, flag, wfs)' % iLayer)
+            if not self._lib.StSdGetLayRawConcs(self._key, iLayer_,
+                                                c.byref(flag_), c.byref(wfs_)):
+                raise StratagemError("Cannot get layer concentration")
+
+            composition = {}
+            for z in layer.composition.keys():
+                nra_ = c.c_int(z)
+                l.debug('StSdGetEltIdx(key, %i, %i)' % (iLayer, z))
+                zindex = self._lib.StSdGetEltIdx(self._key, iLayer_, nra_)
+                composition[z] = wfs_[zindex]
+
+            l.debug("StSdGetThick(key, %i)", iLayer)
+            if not self._lib.StSdGetThick(self._key, iLayer_, c.byref(thick_known),
+                                          c.byref(mass_thickness), c.byref(thickness),
                                           c.byref(density)):
                 raise StratagemError("Cannot get thickness")
 
-            thicknesses.setdefault(layer, thickness.value / 10)
+            newlayer = Layer(composition, thickness.value / 10,
+                             mass_thickness.value / 1e6, density.value)
+            layers[layer] = newlayer
 
-        return thicknesses
+        return layers
 
     def compute_prz(self, maxdepth_m=None, bins=100):
         """
@@ -509,7 +535,7 @@ class Stratagem:
                 maxdepth_m = 0.0
                 energy = experiment.hv * 1000.0
 
-                for z, fraction in self._substrate.iter_elements():
+                for z, fraction in self._substrate.composition.items():
                     dr = (0.0276 * ATOMIC_MASSES[z + 1] * \
                           (energy / 1000.0) ** 1.67) / \
                           (z ** 0.89 * DENSITIES[z + 1])

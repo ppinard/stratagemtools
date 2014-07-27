@@ -61,12 +61,12 @@ class TestStratagem(unittest.TestCase):
         exp1 = Experiment(79, LINE_MA, 25.0)
         self.s.add_experiment(exp1)
 
-        self.s.set_geometry(40.0 / 180 * math.pi, 0.0, 0.0)
+        self.s.set_geometry(math.radians(40.0), 0.0, 0.0)
 
         return film, subs, exp0, exp1
 
     def _setup_unknown_thickness(self):
-        film = Layer({13:1.0}, thickness=-1.0)
+        film = Layer({13:1.0}, thickness=None)
         self.s.add_layer(film)
 
         subs = Layer({79:1.0})
@@ -78,7 +78,7 @@ class TestStratagem(unittest.TestCase):
         exp1 = Experiment(79, LINE_MA, 25.0, 0.981343858)
         self.s.add_experiment(exp1)
 
-        self.s.set_geometry(40.0 / 180 * math.pi, 0.0, 0.0)
+        self.s.set_geometry(math.radians(40.0), 0.0, 0.0)
 
         return film, subs, exp0, exp1
 
@@ -92,7 +92,7 @@ class TestStratagem(unittest.TestCase):
         exp1 = Experiment(79, LINE_MA, 10.0)
         self.s.add_experiment(exp1)
 
-        self.s.set_geometry(40.0 / 180 * math.pi, 0.0, 0.0)
+        self.s.set_geometry(math.radians(40.0), 0.0, 0.0)
 
         return subs, exp0, exp1
 
@@ -100,7 +100,7 @@ class TestStratagem(unittest.TestCase):
         layer = Layer({13: 0.2, 29: 0.8}, mass_thickness=3.55, density=2.7)
         self.s.add_layer(layer)
 
-        layer = Layer({6:-1.0, 74:-1.0}, thickness=-1.0)
+        layer = Layer({6: None, 74: None}, thickness=None)
         self.s.add_layer(layer)
 
         layer = Layer({79:1.0})
@@ -155,16 +155,16 @@ class TestStratagem(unittest.TestCase):
                                  c.byref(massThickness), c.byref(thickness),
                                  c.byref(density))
         self.assertFalse(thickKnown.value)
-        self.assertAlmostEqual(-1.0, thickness.value / 10, 3)
-        self.assertAlmostEqual(-1.0, massThickness.value * 1e6, 3)
-        self.assertAlmostEqual(0.0, density.value, 3)
+        self.assertAlmostEqual(-1.0, thickness.value, 3)
+        self.assertAlmostEqual(-1.0, massThickness.value, 3)
+        self.assertAlmostEqual(-1.0, density.value, 3)
 
         self.s._lib.StSdGetThick(self.s._key, c.c_int(2), c.byref(thickKnown),
                                  c.byref(massThickness), c.byref(thickness),
                                  c.byref(density))
         self.assertFalse(thickKnown.value)
-        self.assertAlmostEqual(-1.0, thickness.value / 10, 3)
-        self.assertAlmostEqual(-1.0, massThickness.value * 1e6, 3)
+        self.assertAlmostEqual(-1.0, thickness.value, 3)
+        self.assertAlmostEqual(-1.0, massThickness.value, 3)
         self.assertAlmostEqual(19.30, density.value, 3)
 
     def testadd_experiment(self):
@@ -315,13 +315,14 @@ class TestStratagem(unittest.TestCase):
         self.assertAlmostEqual(0.4947, kratios[exp0], 3)
         self.assertAlmostEqual(0.36845, kratios[exp1], 3)
 
-    def testcompute_thicknesses(self):
+    def testcompute(self):
         film, _subs, _exp0, _exp1 = self._setup_unknown_thickness()
 
-        thicknesses = self.s.compute_thicknesses()
+        layers = self.s.compute()
 
-        self.assertEqual(1, len(thicknesses))
-        self.assertAlmostEqual(20.0, thicknesses[film], 1)
+        self.assertEqual(1, len(layers))
+        self.assertAlmostEqual(20.0, layers[film].thickness, 1)
+        self.assertAlmostEqual(1.0, layers[film].composition[13], 4)
 
     def testcompute_prz(self):
         _subs, exp0, _exp1 = self._setup_substrate()
