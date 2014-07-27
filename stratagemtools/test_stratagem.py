@@ -19,18 +19,18 @@ import math
 # Third party modules.
 
 # Local modules.
-from stratagem import Stratagem
-from layer import Layer
-from experiment import Experiment
+from stratagemtools.stratagem import Stratagem
+from stratagemtools.layer import Layer
+from stratagemtools.experiment import Experiment
 
 # Globals and constants variables.
-from experiment import LINE_KA, LINE_LA, LINE_MA
-from stratagem import PRZMODE_PAP, FLUORESCENCE_NONE
+from stratagemtools.experiment import LINE_KA, LINE_LA, LINE_MA
+from stratagemtools.stratagem import PRZMODE_PAP, FLUORESCENCE_NONE
 
 path = os.path.join(os.path.dirname(__file__), 'stratagem.cfg')
 path = os.path.abspath(path)
 if not os.path.exists(path):
-    print >> sys.stderr, 'Missing stratagem.cfg'
+    print('Missing stratagem.cfg', file=sys.stderr)
 
 class TestStratagem(unittest.TestCase):
 
@@ -66,7 +66,7 @@ class TestStratagem(unittest.TestCase):
         return film, subs, exp0, exp1
 
     def _setup_unknown_thickness(self):
-        film = Layer({13:1.0}, thickness= -1.0)
+        film = Layer({13:1.0}, thickness=-1.0)
         self.s.add_layer(film)
 
         subs = Layer({79:1.0})
@@ -100,7 +100,7 @@ class TestStratagem(unittest.TestCase):
         layer = Layer({13: 0.2, 29: 0.8}, mass_thickness=3.55, density=2.7)
         self.s.add_layer(layer)
 
-        layer = Layer({6:-1.0, 74:-1.0}, thickness= -1.0)
+        layer = Layer({6:-1.0, 74:-1.0}, thickness=-1.0)
         self.s.add_layer(layer)
 
         layer = Layer({79:1.0})

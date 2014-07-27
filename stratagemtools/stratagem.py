@@ -65,7 +65,7 @@ class Stratagem:
         l.debug("dll=%s", dll_path)
         self._lib = c.WinDLL(dll_path)
 
-        self._key = c.create_string_buffer('DemoSample')
+        self._key = c.create_string_buffer(b'DemoSample')
         self._stobjectnew(self._key)
         self._stenableerrordisplay(False)
 
@@ -373,7 +373,7 @@ class Stratagem:
                 raise ValueError("Thickness of layer %i is unknown" % i)
 
         # Compute
-        layer = self._layers.keys()[0]
+        layer = list(self._layers.keys())[0]
         thickness_low = layer.thickness
         thickness_high = layer.thickness * 10
         step = 1

@@ -15,7 +15,7 @@ import logging
 # Third party modules.
 
 # Local modules.
-from layer import Layer
+from stratagemtools.layer import Layer
 
 # Globals and constants variables.
 
