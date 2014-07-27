@@ -84,7 +84,7 @@ class Layer:
 
         if density <= 0.0:
             density = 0.0
-            for z, wf in elements.iteritems():
+            for z, wf in elements.items():
                 density += DENSITIES[z - 1] * wf
         self._density = density
 
@@ -110,7 +110,7 @@ class Layer:
           for z, wf in layer.iter_elements():
             print z, wf
         """
-        return self._elements.iteritems()
+        return self._elements.items()
 
     def is_thickness_known(self):
         return self._thickness >= 0 and self._mass_thickness >= 0
