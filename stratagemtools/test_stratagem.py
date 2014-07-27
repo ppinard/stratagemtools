@@ -348,5 +348,5 @@ if __name__ == '__main__': #pragma: no cover
         logging.getLogger().setLevel(logging.DEBUG)
         unittest.main()
     else:
-        print >> sys.stderr, 'Tests can only be ran under Windows platform'
+        print('Tests can only be ran under Windows platform', file=sys.stderr)
 
