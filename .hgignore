@@ -1,3 +1,6 @@
 syntax: glob
 
-stratagem.cfg
+*.pyc
+*.bak
+
+stratagemtools/stratagem.cfg
