@@ -157,15 +157,15 @@ class Stratagem:
             if layer.is_density_known():
                 density = layer.density_kg_m3 / 1e3 # g/cm3
             else:
-                density = -1.0
+                density = 10.0
             density_ = c.c_double(density)
 
             if thick_known:
                 thickness = layer.thickness_m * 1e10  # Angstroms
                 mass_thickness = layer.mass_thickness_kg_m2 * 0.1 # g/cm2
             else:
-                thickness = -1.0
-                mass_thickness = -1.0
+                thickness = 0.0
+                mass_thickness = 0.0
             thickness_ = c.c_double(thickness)
             mass_thickness_ = c.c_double(mass_thickness)
 
@@ -207,6 +207,12 @@ class Stratagem:
                                              c.byref(iElt_), c.byref(iLine_), c.byref(iExpK_)):
             raise StratagemError("Cannot add atomic number and line")
 
+        standard = experiment.standard
+        standard_ = c.create_string_buffer(standard.encode('ascii'))
+        l.debug('StEdSetLine(key, %i, %i, %i, %s)', iElt_.value, iLine_.value, klm_.value, standard)
+        if not self._lib.StEdSetLine(self._key, iElt_, iLine_, klm_, standard_):
+            raise StratagemError("Cannot set standard")
+
         analyzed = experiment.is_analyzed()
         analyzed_ = c.c_bool(analyzed)
         l.debug("StEdSetAnalyzedFlag(key, %i, %r)", iElt_.value, analyzed)
@@ -223,7 +229,7 @@ class Stratagem:
                                      c.c_int(2)):
             raise StratagemError("Cannot set experiment k-ratio")
 
-        if analyzed:
+        if experiment.is_analyzed():
             indexes = (iElt_.value, iLine_.value, iExpK_.value)
             self._experiments.setdefault(experiment, indexes)
 
@@ -258,6 +264,15 @@ class Stratagem:
         flag_ = c.c_int(flag)
         l.debug('StSetFluorFlg(%i)', flag)
         self._lib.StSetFluorFlg(flag_)
+
+    def set_standard_directory(self, dirpath):
+        dirpath_ = c.create_string_buffer(dirpath.encode('ascii'))
+        self._lib.StSetDirectory(c.c_int(1), dirpath_)
+
+    def get_standard_directory(self):
+        dirpath = (c.c_char * 256)()
+        self._lib.StGetDirectory(c.c_int(1), c.byref(dirpath), 256)
+        return dirpath.value.decode('ascii')
 
     def compute_kratio_vs_thickness(self, layer,
                                     thickness_low_m, thickness_high_m, step):
@@ -444,8 +459,10 @@ class Stratagem:
         continue_ = c.c_bool(True)
         iteration = 0
 
-        while(True):
+        l.debug('Start iteration')
+        while True:
             iteration += 1
+            l.debug('Iteration #%i' % iteration)
 
             l.debug('StComputeIterpNext(key, %r)' % continue_.value)
             if not self._lib.StComputeIterpNext(self._key, c.byref(continue_)):
@@ -453,6 +470,8 @@ class Stratagem:
 
             if not continue_.value:
                 break
+
+        l.debug('Iteration completed')
 
         # Fetch results
         layers = {}
@@ -469,12 +488,13 @@ class Stratagem:
             nbelt = self._lib.StSdGetNbElts(self._key, iLayer_)
             if nbelt == -1:
                 raise StratagemError("Cannot get number of elements")
+            print(nbelt)
 
-            flag_ = c.c_int()
+            flag_ = (c.c_int * nbelt)()
             wfs_ = (c.c_double * nbelt)()
             l.debug('StSdGetLayRawConcs(key, %i, flag, wfs)' % iLayer)
             if not self._lib.StSdGetLayRawConcs(self._key, iLayer_,
-                                                c.byref(flag_), c.byref(wfs_)):
+                                                flag_, wfs_):
                 raise StratagemError("Cannot get layer concentration")
 
             composition = {}

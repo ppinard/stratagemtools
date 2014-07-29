@@ -33,7 +33,7 @@ LINE_MA = 4
 LINE_MB = 5
 
 class Experiment:
-    def __init__(self, z, line, energy_eV, kratio=0.0, analyzed=True):
+    def __init__(self, z, line, energy_eV, kratio=0.0, standard='', analyzed=True):
         """
         Creates a new experiment. 
         An experiment indicates the measurement conditions and/or results.
@@ -49,6 +49,7 @@ class Experiment:
         self._line = line
         self._energy_eV = energy_eV
         self._kratio = kratio
+        self._standard = standard
         self._analyzed = analyzed
 
     def is_analyzed(self):
@@ -84,3 +85,7 @@ class Experiment:
         Returns the measured k-ratio or ``0.0`` if no k-ratio was measured.
         """
         return self._kratio
+
+    @property
+    def standard(self):
+        return self._standard
