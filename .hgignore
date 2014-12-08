@@ -1,6 +1,10 @@
 syntax: glob
 
-*.pyc
 *.bak
+*.pyc
+*.egg-info
 
-stratagemtools/stratagem.cfg
+syntax: regexp
+^lib
+^dist
+^build
