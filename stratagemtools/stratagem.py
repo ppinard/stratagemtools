@@ -27,10 +27,10 @@ from operator import attrgetter
 # Third party modules.
 
 # Local modules.
+from stratagemtools.layer import Layer
+import stratagemtools.element_properties as ep
 
 # Globals and constants variables.
-from stratagemtools.layer import Layer, DENSITIES, ATOMIC_MASSES
-
 _SECTION_STRATAGEM = "Stratagem"
 _OPTION_DLLPATH = "dllPath"
 
@@ -566,8 +566,8 @@ class Stratagem:
                 energy_keV = experiment.energy_eV / 1e3
 
                 for z, fraction in self._substrate.composition.items():
-                    dr = (0.0276 * ATOMIC_MASSES[z + 1] * energy_keV ** 1.67) / \
-                          (z ** 0.89 * DENSITIES[z + 1])
+                    dr = (0.0276 * ep.atomic_mass_kg_mol(z) * 1e3 * energy_keV ** 1.67) / \
+                          (z ** 0.89 * ep.mass_density_kg_m3(z) / 1e3)
                     maxdepth_m += fraction / (dr * 1e-6)
 
                 maxdepth_m = 1.0 / maxdepth_m
