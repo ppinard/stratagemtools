@@ -488,7 +488,6 @@ class Stratagem:
             nbelt = self._lib.StSdGetNbElts(self._key, iLayer_)
             if nbelt == -1:
                 raise StratagemError("Cannot get number of elements")
-            print(nbelt)
 
             flag_ = (c.c_int * nbelt)()
             wfs_ = (c.c_double * nbelt)()
