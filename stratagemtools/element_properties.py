@@ -101,7 +101,7 @@ def atomic_number(symbol):
     except ValueError:
         raise ValueError("Unknown symbol: %s" % symbol)
 
-def mass_density_kg_m3(self, z):
+def mass_density_kg_m3(z):
     if z == 85 or z == 87:
         raise ValueError("No mass density for atomic number: %i." % z)
     if z < 0 or z > 96:
@@ -112,7 +112,7 @@ def mass_density_kg_m3(self, z):
     except IndexError:
         return ValueError("No mass density for atomic number: %i." % z)
 
-def atomic_mass_kg_mol(self, z):
+def atomic_mass_kg_mol(z):
     if z < 0 or z > 96:
         raise ValueError("No mass density for atomic number: %i." % z)
 
