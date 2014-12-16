@@ -18,7 +18,7 @@ import math
 # Third party modules.
 
 # Local modules.
-from stratagemtools.stratagem import Stratagem
+from stratagemtools.stratagem import Stratagem, StratagemError
 from stratagemtools.layer import Layer
 from stratagemtools.experiment import Experiment
 
@@ -85,6 +85,10 @@ class TestStratagem(unittest.TestCase):
         self.s.set_geometry(math.radians(40.0), 0.0, 0.0)
 
         return subs, exp0, exp1
+
+    @unittest.skipUnless(os.name == 'nt', 'Test can only be ran under Windows platform')
+    def test_raise_error(self):
+        self.assertRaises(StratagemError, self.s.compute)
 
     @unittest.skipUnless(os.name == 'nt', 'Test can only be ran under Windows platform')
     def testadd_layer(self):
