@@ -1,0 +1,9 @@
+build
+dist
+
+*.egg-info
+.coverage
+*.pyc
+
+coverage.xml
+nosetests.xml
