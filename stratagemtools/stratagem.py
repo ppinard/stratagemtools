@@ -176,6 +176,8 @@ class Stratagem:
                 raise StratagemError("Cannot set thickness")
 
             self._layers.setdefault(layer, int(iLayer_))
+        else:
+            self._substrate = layer
 
     def add_substrate(self, layer):
         """
@@ -187,7 +189,6 @@ class Stratagem:
             raise ValueError("A substrate was already defined.")
 
         self.add_layer(layer, substrate=True)
-        self._substrate = layer
 
     def add_experiment(self, experiment):
         """
@@ -474,48 +475,51 @@ class Stratagem:
         l.debug('Iteration completed')
 
         # Fetch results
-        layers = {}
-
         thick_known = c.c_bool()
         mass_thickness = c.c_double()
         thickness = c.c_double()
         density = c.c_double()
 
-        for layer, iLayer in self._layers.items():
-            iLayer_ = c.c_int(iLayer)
+        def get_layer(ilayer, layer):
+            ilayer_ = c.c_int(ilayer)
 
-            l.debug('StSdGetNbElts(key, %i)' % iLayer)
-            nbelt = self._lib.StSdGetNbElts(self._key, iLayer_)
+            l.debug('StSdGetNbElts(key, %i)' % ilayer)
+            nbelt = self._lib.StSdGetNbElts(self._key, ilayer_)
             if nbelt == -1:
                 raise StratagemError("Cannot get number of elements")
 
             flag_ = (c.c_int * nbelt)()
             wfs_ = (c.c_double * nbelt)()
-            l.debug('StSdGetLayRawConcs(key, %i, flag, wfs)' % iLayer)
-            if not self._lib.StSdGetLayRawConcs(self._key, iLayer_,
+            l.debug('StSdGetLayRawConcs(key, %i, flag, wfs)' % ilayer)
+            if not self._lib.StSdGetLayRawConcs(self._key, ilayer_,
                                                 flag_, wfs_):
                 raise StratagemError("Cannot get layer concentration")
 
             composition = {}
             for z in layer.composition.keys():
                 nra_ = c.c_int(z)
-                l.debug('StSdGetEltIdx(key, %i, %i)' % (iLayer, z))
-                zindex = self._lib.StSdGetEltIdx(self._key, iLayer_, nra_)
+                l.debug('StSdGetEltIdx(key, %i, %i)' % (ilayer, z))
+                zindex = self._lib.StSdGetEltIdx(self._key, ilayer_, nra_)
                 composition[z] = wfs_[zindex]
 
-            l.debug("StSdGetThick(key, %i)", iLayer)
-            if not self._lib.StSdGetThick(self._key, iLayer_, c.byref(thick_known),
+            l.debug("StSdGetThick(key, %i)", ilayer)
+            if not self._lib.StSdGetThick(self._key, ilayer_, c.byref(thick_known),
                                           c.byref(mass_thickness), c.byref(thickness),
                                           c.byref(density)):
                 raise StratagemError("Cannot get thickness")
 
-            newlayer = Layer(composition,
-                             thickness.value / 1e10,
-                             mass_thickness.value * 10.0,
-                             density.value * 1e3)
-            layers[layer] = newlayer
+            return Layer(composition,
+                         thickness.value / 1e10,
+                         mass_thickness.value * 10.0,
+                         density.value * 1e3)
 
-        return layers
+        layers = {}
+        for layer, ilayer in self._layers.items():
+            layers[layer] = get_layer(ilayer, layer)
+
+        substrate = get_layer(ilayer + 1, self._substrate)
+
+        return layers, substrate
 
     def compute_prz(self, maxdepth_m=None, bins=100):
         """

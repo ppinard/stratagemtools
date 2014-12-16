@@ -25,7 +25,7 @@ from stratagemtools.experiment import Experiment
 
 # Globals and constants variables.
 from stratagemtools.experiment import LINE_KA, LINE_LA, LINE_MA
-from stratagemtools.stratagem import PRZMODE_PAP, FLUORESCENCE_NONE
+from stratagemtools.stratagem import PRZMODE_PAP, FLUORESCENCE_NONE, FLUORESCENCE_LINE_CONT
 
 path = os.path.join(os.path.dirname(__file__), 'stratagem.cfg')
 path = os.path.abspath(path)
@@ -156,16 +156,16 @@ class TestStratagem(unittest.TestCase):
                                  c.byref(massThickness), c.byref(thickness),
                                  c.byref(density))
         self.assertFalse(thickKnown.value)
-        self.assertAlmostEqual(-1.0, thickness.value, 3)
-        self.assertAlmostEqual(-1.0, massThickness.value, 3)
-        self.assertAlmostEqual(-1.0, density.value, 3)
+        self.assertAlmostEqual(0.0, thickness.value, 3)
+        self.assertAlmostEqual(0.0, massThickness.value, 3)
+        self.assertAlmostEqual(10.0, density.value, 3)
 
         self.s._lib.StSdGetThick(self.s._key, c.c_int(2), c.byref(thickKnown),
                                  c.byref(massThickness), c.byref(thickness),
                                  c.byref(density))
         self.assertFalse(thickKnown.value)
-        self.assertAlmostEqual(-1.0, thickness.value, 3)
-        self.assertAlmostEqual(-1.0, massThickness.value, 3)
+        self.assertAlmostEqual(0.0, thickness.value, 3)
+        self.assertAlmostEqual(0.0, massThickness.value, 3)
         self.assertAlmostEqual(19.30, density.value, 3)
 
     def testadd_experiment(self):
@@ -319,7 +319,7 @@ class TestStratagem(unittest.TestCase):
     def testcompute(self):
         film, _subs, _exp0, _exp1 = self._setup_unknown_thickness()
 
-        layers = self.s.compute()
+        layers, _substrate = self.s.compute()
 
         self.assertEqual(1, len(layers))
         self.assertAlmostEqual(20.0e-9, layers[film].thickness_m, 9)
@@ -328,6 +328,8 @@ class TestStratagem(unittest.TestCase):
     def testcompute_prz(self):
         _subs, exp0, _exp1 = self._setup_substrate()
 
+        self.s.set_fluorescence(FLUORESCENCE_LINE_CONT)
+        self.s.set_prz_mode(PRZMODE_PAP)
         przs = self.s.compute_prz(None, 100)
 
         rzs, generated, emitted = przs[exp0]
@@ -340,8 +342,8 @@ class TestStratagem(unittest.TestCase):
         self.assertAlmostEqual(1.969945, emitted[0], 4)
 
         self.assertAlmostEqual(1.24978e-5, rzs[1], 4)
-        self.assertAlmostEqual(2.09664, generated[1], 4)
-        self.assertAlmostEqual(2.07307, emitted[1], 4)
+        self.assertAlmostEqual(2.0575, generated[1], 4)
+        self.assertAlmostEqual(2.0438, emitted[1], 4)
 
 if __name__ == '__main__': #pragma: no cover
     if os.name == 'nt':
