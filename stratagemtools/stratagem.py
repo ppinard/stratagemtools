@@ -85,8 +85,8 @@ class Stratagem:
         :arg dll_path: complete path to the location of the ``stratadllogger.dll``
         """
         if dll_path is None:
-            with winreg.OpenKey(winreg.HKEY_CURRENT_USER, _REGISTRY_KEY) as key:
-                basedir = winreg.QueryValueEx(key, _REGISTRY_VALUENAME)[0]
+            with winreg.OpenKey(winreg.HKEY_CURRENT_USER, _REGISTRY_KEY) as key: #@UndefinedVariable
+                basedir = winreg.QueryValueEx(key, _REGISTRY_VALUENAME)[0] #@UndefinedVariable
             dll_path = os.path.join(basedir, 'bin', 'stratadll.dll')
 
         logger.debug("dll=%s", dll_path)
