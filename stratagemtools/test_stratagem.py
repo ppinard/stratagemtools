@@ -12,7 +12,6 @@ __license__ = "GPL v3"
 import unittest
 import logging
 import os
-import sys
 import ctypes as c
 import math
 
@@ -38,9 +37,6 @@ class TestStratagem(unittest.TestCase):
         unittest.TestCase.tearDown(self)
 
         self.s.close()
-
-    def testskeleton(self):
-        self.assertTrue(True)
 
     def _setup_known_thickness(self):
         film = Layer({13:1.0}, thickness_m=20e-9)
@@ -90,6 +86,7 @@ class TestStratagem(unittest.TestCase):
 
         return subs, exp0, exp1
 
+    @unittest.skipUnless(os.name == 'nt', 'Test can only be ran under Windows platform')
     def testadd_layer(self):
         layer = Layer({13: 0.2, 29: 0.8}, mass_thickness_kg_m2=3.55e-5,
                       density_kg_m3=2.7e3)
@@ -162,6 +159,7 @@ class TestStratagem(unittest.TestCase):
         self.assertAlmostEqual(0.0, massThickness.value, 3)
         self.assertAlmostEqual(19.30, density.value, 3)
 
+    @unittest.skipUnless(os.name == 'nt', 'Test can only be ran under Windows platform')
     def testadd_experiment(self):
         self.s.add_experiment(Experiment(29, LINE_KA, 25.0e3, 0.5))
         self.s.add_experiment(Experiment(29, LINE_KA, 20.0e3, 0.35))
@@ -239,6 +237,7 @@ class TestStratagem(unittest.TestCase):
         self.assertAlmostEqual(20.0, hv_.value, 3)
         self.assertAlmostEqual(0.0, k_.value, 3)
 
+    @unittest.skipUnless(os.name == 'nt', 'Test can only be ran under Windows platform')
     def testset_geometry(self):
         self.s.set_geometry(0.1, 0.2, 0.3)
 
@@ -251,14 +250,17 @@ class TestStratagem(unittest.TestCase):
         self.assertAlmostEqual(0.2, tilt_.value, 3)
         self.assertAlmostEqual(0.3, azimuth_.value, 3)
 
+    @unittest.skipUnless(os.name == 'nt', 'Test can only be ran under Windows platform')
     def testset_prz_mode(self):
         self.s.set_prz_mode(PRZMODE_PAP)
         self.assertEqual(1, self.s._lib.StGetPrzMode())
 
+    @unittest.skipUnless(os.name == 'nt', 'Test can only be ran under Windows platform')
     def testset_fluorescence(self):
         self.s.set_fluorescence(FLUORESCENCE_NONE)
         self.assertEqual(0, self.s._lib.StGetFluorFlg())
 
+    @unittest.skipUnless(os.name == 'nt', 'Test can only be ran under Windows platform')
     def testcompute_kratio_vs_thickness(self):
         film, _subs, exp0, exp1 = self._setup_known_thickness()
 
@@ -273,6 +275,7 @@ class TestStratagem(unittest.TestCase):
         self.assertEqual(11, len(kratios[exp0]))
         self.assertEqual(11, len(kratios[exp1]))
 
+    @unittest.skipUnless(os.name == 'nt', 'Test can only be ran under Windows platform')
     def testcompute_kratio_vs_energy(self):
         _film, _subs, exp0, exp1 = self._setup_known_thickness()
 
@@ -292,6 +295,7 @@ class TestStratagem(unittest.TestCase):
         self.assertAlmostEqual(0.0076135, exp0_kratios[-2], 5)
         self.assertAlmostEqual(0.9819639, exp1_kratios[-2], 5)
 
+    @unittest.skipUnless(os.name == 'nt', 'Test can only be ran under Windows platform')
     def testcompute_kratios(self):
         _film, _subs, exp0, exp1 = self._setup_known_thickness()
 
@@ -301,6 +305,7 @@ class TestStratagem(unittest.TestCase):
         self.assertAlmostEqual(0.008347815, kratios[exp0], 3)
         self.assertAlmostEqual(0.981343858, kratios[exp1], 3)
 
+    @unittest.skipUnless(os.name == 'nt', 'Test can only be ran under Windows platform')
     def testcompute_kratios_substrate(self):
         _subs, exp0, exp1 = self._setup_substrate()
 
@@ -310,6 +315,7 @@ class TestStratagem(unittest.TestCase):
         self.assertAlmostEqual(0.4947, kratios[exp0], 3)
         self.assertAlmostEqual(0.36845, kratios[exp1], 3)
 
+    @unittest.skipUnless(os.name == 'nt', 'Test can only be ran under Windows platform')
     def testcompute(self):
         film, _subs, _exp0, _exp1 = self._setup_unknown_thickness()
 
@@ -319,6 +325,7 @@ class TestStratagem(unittest.TestCase):
         self.assertAlmostEqual(20.0e-9, layers[film].thickness_m, 9)
         self.assertAlmostEqual(1.0, layers[film].composition[13], 4)
 
+    @unittest.skipUnless(os.name == 'nt', 'Test can only be ran under Windows platform')
     def testcompute_prz(self):
         _subs, exp0, _exp1 = self._setup_substrate()
 
@@ -340,9 +347,5 @@ class TestStratagem(unittest.TestCase):
         self.assertAlmostEqual(2.0438, emitted[1], 4)
 
 if __name__ == '__main__': #pragma: no cover
-    if os.name == 'nt':
-        logging.getLogger().setLevel(logging.DEBUG)
-        unittest.main()
-    else:
-        print('Tests can only be ran under Windows platform', file=sys.stderr)
-
+    logging.getLogger().setLevel(logging.DEBUG)
+    unittest.main()
