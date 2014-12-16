@@ -19,11 +19,34 @@ __copyright__ = "Copyright (c) 2011 Philippe T. Pinard"
 __license__ = "GPL v3"
 
 # Standard library modules.
+import os
 import ctypes as c
 import logging
 logger = logging.getLogger(__name__)
-from configparser import SafeConfigParser
 from operator import attrgetter
+try:
+    import winreg
+except ImportError:
+    try:
+        import _winreg as winreg
+    except ImportError:
+        class winreg:
+
+            HKEY_CURRENT_USER = None
+
+            class _PyHKEY(object):
+
+                def __enter__(self):
+                    return self
+
+                def __exit__(self, exc_type, exc_value, traceback):
+                    pass
+
+            def OpenKey(self, key, sub_key, res, sam):
+                return self._PyHKEY()
+
+            def QueryValueEx(self, key, value_name):
+                return None
 
 # Third party modules.
 
@@ -32,8 +55,8 @@ from stratagemtools.layer import Layer
 import stratagemtools.element_properties as ep
 
 # Globals and constants variables.
-_SECTION_STRATAGEM = "Stratagem"
-_OPTION_DLLPATH = "dllPath"
+_REGISTRY_KEY = "Software\SAMx\Stratagem\Configuration"
+_REGISTRY_VALUENAME = 'InstallOEMDirectory'
 
 PRZMODE_XPP = 0
 PRZMODE_PAP = 1
@@ -53,7 +76,7 @@ class StratagemError(Exception):
     pass
 
 class Stratagem:
-    def __init__(self, configfile=None, dll_path=None):
+    def __init__(self, dll_path=None):
         """
         Initializes the connection to the Stratagem DLlogger.
         One of the following argument must be specified:
@@ -61,13 +84,10 @@ class Stratagem:
         :arg configfile: file-object to the configuration file
         :arg dll_path: complete path to the location of the ``stratadllogger.dll``
         """
-        if configfile:
-            config = SafeConfigParser()
-            config.readfp(configfile)
-
-            if config.has_section(_SECTION_STRATAGEM):
-                if config.has_option(_SECTION_STRATAGEM, _OPTION_DLLPATH):
-                    dll_path = config.get(_SECTION_STRATAGEM, _OPTION_DLLPATH)
+        if dll_path is None:
+            with winreg.OpenKey(winreg.HKEY_CURRENT_USER, _REGISTRY_KEY) as key:
+                basedir = winreg.QueryValueEx(key, _REGISTRY_VALUENAME)[0]
+            dll_path = os.path.join(basedir, 'bin', 'stratadll.dll')
 
         logger.debug("dll=%s", dll_path)
         self._lib = c.WinDLL(dll_path)

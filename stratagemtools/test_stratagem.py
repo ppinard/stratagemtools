@@ -27,18 +27,12 @@ from stratagemtools.experiment import Experiment
 from stratagemtools.experiment import LINE_KA, LINE_LA, LINE_MA
 from stratagemtools.stratagem import PRZMODE_PAP, FLUORESCENCE_NONE, FLUORESCENCE_LINE_CONT
 
-path = os.path.join(os.path.dirname(__file__), 'stratagem.cfg')
-path = os.path.abspath(path)
-if not os.path.exists(path):
-    print('Missing stratagem.cfg', file=sys.stderr)
-
 class TestStratagem(unittest.TestCase):
 
     def setUp(self):
         unittest.TestCase.setUp(self)
 
-        configfile = open(path, 'r')
-        self.s = Stratagem(configfile)
+        self.s = Stratagem()
 
     def tearDown(self):
         unittest.TestCase.tearDown(self)
