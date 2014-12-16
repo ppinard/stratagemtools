@@ -23,7 +23,7 @@ __license__ = "GPL v3"
 # Third party modules.
 
 # Local modules.
-import stratagemtools.element_properties as ep
+from stratagemtools.element_properties import symbol, mass_density_kg_m3
 
 # Globals and constants variables.
 
@@ -57,7 +57,7 @@ class Layer:
         if density_kg_m3 is None and is_composition_known:
             density_kg_m3 = 0.0
             for z, wf in composition.items():
-                density_kg_m3 += wf / ep.mass_density_kg_m3(z)
+                density_kg_m3 += wf / mass_density_kg_m3(z)
             density_kg_m3 = 1.0 / density_kg_m3
         self._density_kg_m3 = density_kg_m3
         self._is_density_known = density_kg_m3 is not None
@@ -77,7 +77,7 @@ class Layer:
             mass_thickness_kg_m2 is not None
 
     def __repr__(self):
-        comp_str = ', '.join('%s: %s' % (ep.symbol(z), wf) \
+        comp_str = ', '.join('%s: %s' % (symbol(z), wf) \
                              for z, wf in self.composition.items())
         thickness_str = '%s nm' % (self.thickness_m * 1e9,) \
             if self.is_thickness_known() else 'unknown'

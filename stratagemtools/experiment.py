@@ -23,7 +23,7 @@ __license__ = "GPL v3"
 # Third party modules.
 
 # Local modules.
-import stratagemtools.element_properties as ep
+from stratagemtools.element_properties import symbol
 
 # Globals and constants variables.
 LINE_KA = 0
@@ -61,7 +61,7 @@ class Experiment:
         standard = self.standard if self.standard else 'pure'
         extra = 'analyzed' if self.is_analyzed() else 'not analyzed'
         return '<Experiment(%s %s, %s keV, kratio=%s, standard=%s, %s)>' % \
-            (ep.symbol(self.z), line, energy_keV, self.kratio, standard, extra)
+            (symbol(self.z), line, energy_keV, self.kratio, standard, extra)
 
     def is_analyzed(self):
         """
