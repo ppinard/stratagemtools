@@ -13,14 +13,15 @@
 
 # Script information for the file.
 __author__ = "Philippe T. Pinard"
-__email__ = "philippe.pinard@gmail.com"
+__email__ = "philippe.pinard@gmailogger.com"
 __version__ = "0.1"
 __copyright__ = "Copyright (c) 2011 Philippe T. Pinard"
 __license__ = "GPL v3"
 
 # Standard library modules.
 import ctypes as c
-import logging as l
+import logging
+logger = logging.getLogger(__name__)
 from configparser import SafeConfigParser
 from operator import attrgetter
 
@@ -54,11 +55,11 @@ class StratagemError(Exception):
 class Stratagem:
     def __init__(self, configfile=None, dll_path=None):
         """
-        Initializes the connection to the Stratagem DLL.
+        Initializes the connection to the Stratagem DLlogger.
         One of the following argument must be specified:
         
         :arg configfile: file-object to the configuration file
-        :arg dll_path: complete path to the location of the ``stratadll.dll``
+        :arg dll_path: complete path to the location of the ``stratadllogger.dll``
         """
         if configfile:
             config = SafeConfigParser()
@@ -68,7 +69,7 @@ class Stratagem:
                 if config.has_option(_SECTION_STRATAGEM, _OPTION_DLLPATH):
                     dll_path = config.get(_SECTION_STRATAGEM, _OPTION_DLLPATH)
 
-        l.debug("dll=%s", dll_path)
+        logger.debug("dll=%s", dll_path)
         self._lib = c.WinDLL(dll_path)
 
         self._key = c.create_string_buffer(b'DemoSample')
@@ -81,19 +82,19 @@ class Stratagem:
         bNormal_ = c.c_bool(True)
         iniFlags_ = c.c_int(0)
 
-        l.debug("StObjectNew(key, %r, %i)", True, 0)
+        logger.debug("StObjectNew(key, %r, %i)", True, 0)
         if not self._lib.StObjectNew(self._key, bNormal_, iniFlags_):
             raise StratagemError("Cannot create object")
 
     def _stenableerrordisplay(self, enable):
         enable_ = c.c_bool(enable)
 
-        l.debug("StEnableErrorDisplay(%r)", enable)
+        logger.debug("StEnableErrorDisplay(%r)", enable)
         self._lib.StEnableErrorDisplay(enable_)
 
     def close(self):
         """
-        Closes the connection to the Statagem DLL.
+        Closes the connection to the Statagem DLlogger.
         """
         self._lib.StObjectDelete(self._key)
         del self._lib
@@ -117,22 +118,22 @@ class Stratagem:
         
         :return: index of the layer
         """
-        l.debug("StSdAddLayer(key)")
+        logger.debug("StSdAddLayer(key)")
         iLayer_ = self._lib.StSdGetNbLayers(self._key)
 
-        l.debug("StSdAddLayer(key, %i)", iLayer_)
+        logger.debug("StSdAddLayer(key, %i)", iLayer_)
         if not self._lib.StSdAddLayer(self._key, iLayer_):
             raise StratagemError("Cannot add layer")
 
         for i, value in enumerate(layer.composition.items()):
             iElt_ = c.c_int(i)
-            l.debug("StSdAddElt(key, %i, %i)", iLayer_, i)
+            logger.debug("StSdAddElt(key, %i, %i)", iLayer_, i)
             if not self._lib.StSdAddElt(self._key, iLayer_, iElt_):
                 raise StratagemError("Cannot add element")
 
             z, wf = value
             nra_ = c.c_int(z)
-            l.debug("StSdSetNrAtom(key, %i, %i, %i)", iLayer_, i, z)
+            logger.debug("StSdSetNrAtom(key, %i, %i, %i)", iLayer_, i, z)
             if not self._lib.StSdSetNrAtom(self._key, iLayer_, iElt_, nra_):
                 raise StratagemError("Cannot set atomic number")
 
@@ -140,13 +141,13 @@ class Stratagem:
                 flag = CONCENTRATION_FLAG_KNOWN
 
                 wf_ = c.c_double(wf)
-                l.debug("StSdSetConc(key, %i, %i, %f)", iLayer_, i, wf)
+                logger.debug("StSdSetConc(key, %i, %i, %f)", iLayer_, i, wf)
                 if not self._lib.StSdSetConc(self._key, iLayer_, iElt_, wf_):
                     raise StratagemError("Cannot set concentration")
             else:
                 flag = CONCENTRATION_FLAG_UNKNOWN
 
-            l.debug("StSdSetConcFlag(key, %i, %i, %i)", iLayer_, i, flag)
+            logger.debug("StSdSetConcFlag(key, %i, %i, %i)", iLayer_, i, flag)
             if not self._lib.StSdSetConcFlag(self._key, iLayer_, iElt_, c.c_int(flag)):
                 raise StratagemError("Cannot set concentration flag")
 
@@ -169,7 +170,7 @@ class Stratagem:
             thickness_ = c.c_double(thickness)
             mass_thickness_ = c.c_double(mass_thickness)
 
-            l.debug("StSdSetThick(key, %i, %r, %d, %d, %d)", iLayer_,
+            logger.debug("StSdSetThick(key, %i, %r, %d, %d, %d)", iLayer_,
                     thick_known, mass_thickness, thickness, density)
             if not self._lib.StSdSetThick(self._key, iLayer_, thick_known_,
                                           mass_thickness_, thickness_, density_):
@@ -203,25 +204,25 @@ class Stratagem:
         iElt_ = c.c_int()
         iLine_ = c.c_int()
         iExpK_ = c.c_int()
-        l.debug('StEdAddNrAtomLineHV(key, %i, %i)', experiment.z, experiment.line)
+        logger.debug('StEdAddNrAtomLineHV(key, %i, %i)', experiment.z, experiment.line)
         if not self._lib.StEdAddNrAtomLineHV(self._key, nra_, klm_, hv_,
                                              c.byref(iElt_), c.byref(iLine_), c.byref(iExpK_)):
             raise StratagemError("Cannot add atomic number and line")
 
         standard = experiment.standard
         standard_ = c.create_string_buffer(standard.encode('ascii'))
-        l.debug('StEdSetLine(key, %i, %i, %i, %s)', iElt_.value, iLine_.value, klm_.value, standard)
+        logger.debug('StEdSetLine(key, %i, %i, %i, %s)', iElt_.value, iLine_.value, klm_.value, standard)
         if not self._lib.StEdSetLine(self._key, iElt_, iLine_, klm_, standard_):
             raise StratagemError("Cannot set standard")
 
         analyzed = experiment.is_analyzed()
         analyzed_ = c.c_bool(analyzed)
-        l.debug("StEdSetAnalyzedFlag(key, %i, %r)", iElt_.value, analyzed)
+        logger.debug("StEdSetAnalyzedFlag(key, %i, %r)", iElt_.value, analyzed)
         if not self._lib.StEdSetAnalyzedFlag(self._key, iElt_, analyzed_):
             raise StratagemError("Cannot add experiment analyzed flag")
 
         kratio_ = c.c_double(experiment.kratio)
-        l.debug("StEdSetExpK(key, %i, %i, %i, %f, %f, %f, 0.0, 2)",
+        logger.debug("StEdSetExpK(key, %i, %i, %i, %f, %f, %f, 0.0, 2)",
                 iElt_.value, iLine_.value, iExpK_.value,
                 experiment.energy_eV / 1e3, experiment.energy_eV / 1e3,
                 experiment.kratio)
@@ -245,7 +246,7 @@ class Stratagem:
         toa_ = c.c_double(toa)
         tilt_ = c.c_double(tilt)
         azimuth_ = c.c_double(azimuth)
-        l.debug('StSetGeomParams(key, %f, %f, %f)', toa, tilt, azimuth)
+        logger.debug('StSetGeomParams(key, %f, %f, %f)', toa, tilt, azimuth)
         if not self._lib.StSetGeomParams(self._key, toa_, tilt_, azimuth_):
             raise StratagemError("Cannot set geometry parameters")
 
@@ -254,7 +255,7 @@ class Stratagem:
         Sets the type of model to use for the phi-rho-z.
         """
         mode_ = c.c_int(mode)
-        l.debug('StSetPrzMode(%i)', mode)
+        logger.debug('StSetPrzMode(%i)', mode)
         self._lib.StSetPrzMode(mode_)
 
     def set_fluorescence(self, flag):
@@ -263,7 +264,7 @@ class Stratagem:
         and continuum fluorescence or no fluorescence.
         """
         flag_ = c.c_int(flag)
-        l.debug('StSetFluorFlg(%i)', flag)
+        logger.debug('StSetFluorFlg(%i)', flag)
         self._lib.StSetFluorFlg(flag_)
 
     def set_standard_directory(self, dirpath):
@@ -288,7 +289,7 @@ class Stratagem:
         
         :return: :class:`list` of thicknesses, :class:`dict` of experiment-kratios
         """
-        l.debug('StSetKvsThicknessUnit(2)')
+        logger.debug('StSetKvsThicknessUnit(2)')
         self._lib.StSetKvsThicknessUnit(2) # unit in nm
 
         if layer not in self._layers:
@@ -297,13 +298,13 @@ class Stratagem:
         iLayer_ = c.c_int(iLayer)
 
         step_ = c.c_int(step)
-        l.debug('StSetNbComputedHV(%i)', step)
+        logger.debug('StSetNbComputedHV(%i)', step)
         self._lib.StSetNbComputedHV(step_)
 
         # Compute
         low_ = c.c_double(thickness_low_m * 1e9)
         high_ = c.c_double(thickness_high_m * 1e9)
-        l.debug('StComputeKvsThickness(key, %i, %f, %f)',
+        logger.debug('StComputeKvsThickness(key, %i, %f, %f)',
                 iLayer, thickness_low_m * 1e9, thickness_high_m * 1e9)
         if not self._lib.StComputeKvsThickness(self._key, iLayer_, low_, high_):
             raise StratagemError("Cannot compute k-ratio vs thickness")
@@ -345,15 +346,15 @@ class Stratagem:
         :return: :class:`list` of energies, :class:`dict` of experiment-kratios
         """
         step_ = c.c_int(step)
-        l.debug('StSetNbComputedHV(%i)', step)
+        logger.debug('StSetNbComputedHV(%i)', step)
         self._lib.StSetNbComputedHV(step_)
 
         energy_ = c.c_double(energy_high_eV / 1e3)
-        l.debug('StSetMaxHV(%f)' % (energy_high_eV / 1e3,))
+        logger.debug('StSetMaxHV(%f)' % (energy_high_eV / 1e3,))
         self._lib.StSetMaxHV(energy_)
 
         # Compute
-        l.debug('StComputeKvsHV(key)')
+        logger.debug('StComputeKvsHV(key)')
         if not self._lib.StComputeKvsHV(self._key):
             raise StratagemError("Cannot compute k-ratio vs energy")
 
@@ -433,7 +434,7 @@ class Stratagem:
 
             kratio = kratios[experiment][-1]
             if (kratio < 0): # Bug in strategem that some energy don't work
-                l.warn("STRATAGem returns a negative k-ratio, re-try with energy + 1 eV")
+                logger.warn("STRATAGem returns a negative k-ratio, re-try with energy + 1 eV")
                 _energies, kratios = \
                     self.compute_kratio_vs_energy(energy_high_eV + 1.0, step)
                 kratio = kratios[experiment][-1]
@@ -449,30 +450,30 @@ class Stratagem:
         :return: :class:`dict` of layer-thicknesses (in nm)
         """
         iteration_max_ = c.c_int(iteration_max)
-        l.debug('StSetMaxNbIter(%i)', iteration_max)
+        logger.debug('StSetMaxNbIter(%i)', iteration_max)
         self._lib.StSetMaxNbIter(iteration_max_)
 
         # Compute
-        l.debug('StComputeIterpStart(key)')
+        logger.debug('StComputeIterpStart(key)')
         if not self._lib.StComputeIterpStart(self._key):
             raise StratagemError("Cannot start iteration")
 
         continue_ = c.c_bool(True)
         iteration = 0
 
-        l.debug('Start iteration')
+        logger.debug('Start iteration')
         while True:
             iteration += 1
-            l.debug('Iteration #%i' % iteration)
+            logger.debug('Iteration #%i' % iteration)
 
-            l.debug('StComputeIterpNext(key, %r)' % continue_.value)
+            logger.debug('StComputeIterpNext(key, %r)' % continue_.value)
             if not self._lib.StComputeIterpNext(self._key, c.byref(continue_)):
                 break
 
             if not continue_.value:
                 break
 
-        l.debug('Iteration completed')
+        logger.debug('Iteration completed')
 
         # Fetch results
         thick_known = c.c_bool()
@@ -483,14 +484,14 @@ class Stratagem:
         def get_layer(ilayer, layer):
             ilayer_ = c.c_int(ilayer)
 
-            l.debug('StSdGetNbElts(key, %i)' % ilayer)
+            logger.debug('StSdGetNbElts(key, %i)' % ilayer)
             nbelt = self._lib.StSdGetNbElts(self._key, ilayer_)
             if nbelt == -1:
                 raise StratagemError("Cannot get number of elements")
 
             flag_ = (c.c_int * nbelt)()
             wfs_ = (c.c_double * nbelt)()
-            l.debug('StSdGetLayRawConcs(key, %i, flag, wfs)' % ilayer)
+            logger.debug('StSdGetLayRawConcs(key, %i, flag, wfs)' % ilayer)
             if not self._lib.StSdGetLayRawConcs(self._key, ilayer_,
                                                 flag_, wfs_):
                 raise StratagemError("Cannot get layer concentration")
@@ -498,11 +499,11 @@ class Stratagem:
             composition = {}
             for z in layer.composition.keys():
                 nra_ = c.c_int(z)
-                l.debug('StSdGetEltIdx(key, %i, %i)' % (ilayer, z))
+                logger.debug('StSdGetEltIdx(key, %i, %i)' % (ilayer, z))
                 zindex = self._lib.StSdGetEltIdx(self._key, ilayer_, nra_)
                 composition[z] = wfs_[zindex]
 
-            l.debug("StSdGetThick(key, %i)", ilayer)
+            logger.debug("StSdGetThick(key, %i)", ilayer)
             if not self._lib.StSdGetThick(self._key, ilayer_, c.byref(thick_known),
                                           c.byref(mass_thickness), c.byref(thickness),
                                           c.byref(density)):
@@ -551,11 +552,11 @@ class Stratagem:
         hvs_eV = map(attrgetter('energy_eV'), self._experiments.keys())
         maxhv_eV = max(hvs_eV)
         maxhv_ = c.c_double(maxhv_eV / 1e3)
-        l.debug('StSetScaleHV(%s)', maxhv_eV / 1e3)
+        logger.debug('StSetScaleHV(%s)', maxhv_eV / 1e3)
         self._lib.StSetScaleHV(maxhv_)
 
         # Compute
-        l.debug('StComputePrz(key)')
+        logger.debug('StComputePrz(key)')
         if not self._lib.StComputePrz(self._key):
             raise StratagemError('Cannot compute prz')
 
