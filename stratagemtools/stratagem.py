@@ -164,6 +164,8 @@ class Stratagem:
 
         return sample
 
+    sample = property(get_sample, set_sample)
+
     def _add_layer(self, layer, substrate=False):
         """
         Adds a layer from top to bottom. 
@@ -236,8 +238,8 @@ class Stratagem:
         else:
             self._substrate = layer
 
-    def _create_standard(self, composition):
-        pass
+    def _create_standard(self, standard):
+        sample = self.get_sample()
 
     def add_experiment(self, experiment):
         """
@@ -258,7 +260,7 @@ class Stratagem:
             self._raise_error("Cannot add atomic number and line")
 
         standard = experiment.standard
-        if isinstance(standard, dict):
+        if isinstance(standard, Sample):
             standard = self._create_standard(standard)
         standard_ = c.create_string_buffer(standard.encode('ascii'))
         logger.debug('StEdSetLine(key, %i, %i, %i, %s)', iElt_.value, iLine_.value, klm_.value, standard)
@@ -285,6 +287,9 @@ class Stratagem:
             indexes = (iElt_.value, iLine_.value, iExpK_.value)
             self._experiments.setdefault(experiment, indexes)
 
+    def get_experiments(self):
+        return tuple(self._experiments.keys())
+
     def set_geometry(self, toa, tilt, azimuth):
         """
         Sets the geometry.
@@ -300,6 +305,25 @@ class Stratagem:
         if not self._lib.StSetGeomParams(self._key, toa_, tilt_, azimuth_):
             self._raise_error("Cannot set geometry parameters")
 
+    def get_geometry(self):
+        """
+        Returns the geometry.
+        
+        :return: take off angle (in radians), tilt angle (in radians),
+            azimuthal angle (in radians)
+        """
+        toa_ = c.c_double()
+        tilt_ = c.c_double()
+        azimuth_ = c.c_double()
+        logger.debug('StGetGeomParams(key)')
+        if not self._lib.StGetGeomParams(self._key, c.byref(toa_),
+                                         c.byref(tilt_), c.byref(azimuth_)):
+            self._raise_error("Cannot get geometry parameters")
+
+        return toa_.value, tilt_.value, azimuth_.value
+
+    geometry = property(get_geometry)
+
     def set_prz_mode(self, mode):
         """
         Sets the type of model to use for the phi-rho-z.
@@ -307,6 +331,14 @@ class Stratagem:
         mode_ = c.c_int(mode)
         logger.debug('StSetPrzMode(%i)', mode)
         self._lib.StSetPrzMode(mode_)
+
+    def get_prz_mode(self):
+        """
+        Returns the type of model to use for the phi-rho-z.
+        """
+        return self._lib.StGetPrzMode()
+
+    prz_mode = property(get_prz_mode, set_prz_mode)
 
     def set_fluorescence(self, flag):
         """
@@ -317,6 +349,15 @@ class Stratagem:
         logger.debug('StSetFluorFlg(%i)', flag)
         self._lib.StSetFluorFlg(flag_)
 
+    def get_fluorescence(self):
+        """
+        Returns whether to consider characteristic fluorescence, characteristic
+        and continuum fluorescence or no fluorescence.
+        """
+        return self._lib.StGetFluorFlg()
+
+    fluorescence = property(get_fluorescence, set_fluorescence)
+
     def set_standard_directory(self, dirpath):
         dirpath_ = c.create_string_buffer(dirpath.encode('ascii'))
         self._lib.StSetDirectory(c.c_int(1), dirpath_)
@@ -325,6 +366,8 @@ class Stratagem:
         dirpath = (c.c_char * 256)()
         self._lib.StGetDirectory(c.c_int(1), c.byref(dirpath), 256)
         return dirpath.value.decode('ascii')
+
+    standard_directory = property(get_standard_directory, set_standard_directory)
 
     def compute_kratio_vs_thickness(self, layer,
                                     thickness_low_m, thickness_high_m, step):

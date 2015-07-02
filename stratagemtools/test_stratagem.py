@@ -219,27 +219,23 @@ class TestStratagem(unittest.TestCase):
         self.assertAlmostEqual(0.0, k_.value, 3)
 
     @unittest.skipUnless(os.name == 'nt', 'Test can only be ran under Windows platform')
-    def testset_geometry(self):
+    def testgeometry(self):
         self.s.set_geometry(0.1, 0.2, 0.3)
 
-        toa_ = c.c_double()
-        tilt_ = c.c_double()
-        azimuth_ = c.c_double()
-        self.s._lib.StGetGeomParams(self.s._key, c.byref(toa_), c.byref(tilt_),
-                                    c.byref(azimuth_))
-        self.assertAlmostEqual(0.1, toa_.value, 3)
-        self.assertAlmostEqual(0.2, tilt_.value, 3)
-        self.assertAlmostEqual(0.3, azimuth_.value, 3)
+        toa, tilt, azimuth = self.s.get_geometry()
+        self.assertAlmostEqual(0.1, toa, 3)
+        self.assertAlmostEqual(0.2, tilt, 3)
+        self.assertAlmostEqual(0.3, azimuth, 3)
 
     @unittest.skipUnless(os.name == 'nt', 'Test can only be ran under Windows platform')
-    def testset_prz_mode(self):
+    def testprz_mode(self):
         self.s.set_prz_mode(PRZMODE_PAP)
-        self.assertEqual(1, self.s._lib.StGetPrzMode())
+        self.assertEqual(1, self.s.get_prz_mode())
 
     @unittest.skipUnless(os.name == 'nt', 'Test can only be ran under Windows platform')
-    def testset_fluorescence(self):
+    def testfluorescence(self):
         self.s.set_fluorescence(FLUORESCENCE_NONE)
-        self.assertEqual(0, self.s._lib.StGetFluorFlg())
+        self.assertEqual(0, self.s.get_fluorescence())
 
     @unittest.skipUnless(os.name == 'nt', 'Test can only be ran under Windows platform')
     def testcompute_kratio_vs_thickness(self):
