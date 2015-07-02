@@ -67,7 +67,7 @@ class Experiment:
         energy_keV = self.energy_eV / 1e3
         standard = self.standard if self.standard else 'pure'
         extra = 'analyzed' if self.is_analyzed() else 'not analyzed'
-        return '<Experiment(%s %s, %s keV, kratio=%s, standard=%s, %s)>' % \
+        return '<Experiment(%s %s, %s kV, kratio=%.4f, standard=%s, %s)>' % \
             (symbol(self.z), line, energy_keV, self.kratio, standard, extra)
 
     def is_analyzed(self):

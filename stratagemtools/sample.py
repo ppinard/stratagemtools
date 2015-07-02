@@ -61,7 +61,7 @@ class _Layer:
             mass_thickness_kg_m2 is not None
 
     def __repr__(self):
-        comp_str = ', '.join('%s: %s' % (ep.symbol(z), wf) \
+        comp_str = ', '.join('%s: %.4f' % (ep.symbol(z), wf) \
                              for z, wf in self.composition.items())
         thickness_str = '%s nm' % (self.thickness_m * 1e9,) \
             if self.is_thickness_known() else 'unknown'
@@ -111,6 +111,12 @@ class Sample:
         self._substrate = _Layer(composition)
         self._layers = []
 
+    def __repr__(self):
+        comp_str = ', '.join('%s: %.4f' % (ep.symbol(z), wf) \
+                             for z, wf in self.composition.items())
+        return '<%s(%s, %i layers)>' % (self.__class__.__name__, comp_str,
+                                        len(self._layers))
+
     def add_layer(self, composition, thickness_m=None,
                   mass_thickness_kg_m2=None, density_kg_m3=None):
         layer = _Layer(composition, thickness_m, mass_thickness_kg_m2, density_kg_m3)
@@ -125,7 +131,7 @@ class Sample:
 
     @property
     def composition(self):
-        return self._substate.composition
+        return self._substrate.composition
 
     @property
     def substrate(self):
