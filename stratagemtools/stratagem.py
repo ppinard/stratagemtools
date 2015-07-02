@@ -24,6 +24,7 @@ import ctypes as c
 import logging
 logger = logging.getLogger(__name__)
 from operator import attrgetter
+import tempfile
 try:
     import winreg
 except ImportError:
@@ -93,18 +94,20 @@ class Stratagem:
         logger.debug("dll=%s", dll_path)
         self._lib = c.WinDLL(dll_path)
 
+        self._tmpstandards = []
+
         self._key = c.create_string_buffer(b'DemoSample')
         self._stobjectnew(self._key)
         self._stenableerrordisplay(False)
 
         self.reset()
 
-    def _stobjectnew(self, key):
-        bNormal_ = c.c_bool(True)
+    def _stobjectnew(self, key, standard=False):
+        bNormal_ = c.c_bool(not standard)
         iniFlags_ = c.c_int(0)
 
-        logger.debug("StObjectNew(key, %r, %i)", True, 0)
-        if not self._lib.StObjectNew(self._key, bNormal_, iniFlags_):
+        logger.debug("StObjectNew(key, %r, %i)", not standard, 0)
+        if not self._lib.StObjectNew(key, bNormal_, iniFlags_):
             self._raise_error("Cannot create object")
 
     def _stenableerrordisplay(self, enable):
@@ -135,8 +138,13 @@ class Stratagem:
         """
         Closes the connection to the Statagem DLlogger.
         """
+        logger.debug('StObjectDelete(key)')
         self._lib.StObjectDelete(self._key)
         del self._lib
+
+        for filepath in self._tmpstandards:
+            os.remove(filepath)
+            logger.debug('Remove temporary standard: %s', filepath)
 
     def reset(self):
         """
@@ -166,7 +174,7 @@ class Stratagem:
 
     sample = property(get_sample, set_sample)
 
-    def _add_layer(self, layer, substrate=False):
+    def _add_layer(self, layer, substrate=False, key=None):
         """
         Adds a layer from top to bottom. 
         The last layer added is considered as the substrate.
@@ -176,23 +184,26 @@ class Stratagem:
         
         :return: index of the layer
         """
+        if key is None:
+            key = self._key
+
         logger.debug("StSdAddLayer(key)")
-        iLayer_ = self._lib.StSdGetNbLayers(self._key)
+        iLayer_ = self._lib.StSdGetNbLayers(key)
 
         logger.debug("StSdAddLayer(key, %i)", iLayer_)
-        if not self._lib.StSdAddLayer(self._key, iLayer_):
+        if not self._lib.StSdAddLayer(key, iLayer_):
             self._raise_error("Cannot add layer")
 
         for i, value in enumerate(layer.composition.items()):
             iElt_ = c.c_int(i)
             logger.debug("StSdAddElt(key, %i, %i)", iLayer_, i)
-            if not self._lib.StSdAddElt(self._key, iLayer_, iElt_):
+            if not self._lib.StSdAddElt(key, iLayer_, iElt_):
                 self._raise_error("Cannot add element")
 
             z, wf = value
             nra_ = c.c_int(z)
             logger.debug("StSdSetNrAtom(key, %i, %i, %i)", iLayer_, i, z)
-            if not self._lib.StSdSetNrAtom(self._key, iLayer_, iElt_, nra_):
+            if not self._lib.StSdSetNrAtom(key, iLayer_, iElt_, nra_):
                 self._raise_error("Cannot set atomic number")
 
             if wf is not None:
@@ -200,13 +211,13 @@ class Stratagem:
 
                 wf_ = c.c_double(wf)
                 logger.debug("StSdSetConc(key, %i, %i, %f)", iLayer_, i, wf)
-                if not self._lib.StSdSetConc(self._key, iLayer_, iElt_, wf_):
+                if not self._lib.StSdSetConc(key, iLayer_, iElt_, wf_):
                     self._raise_error("Cannot set concentration")
             else:
                 flag = CONCENTRATION_FLAG_UNKNOWN
 
             logger.debug("StSdSetConcFlag(key, %i, %i, %i)", iLayer_, i, flag)
-            if not self._lib.StSdSetConcFlag(self._key, iLayer_, iElt_, c.c_int(flag)):
+            if not self._lib.StSdSetConcFlag(key, iLayer_, iElt_, c.c_int(flag)):
                 self._raise_error("Cannot set concentration flag")
 
         if not substrate:
@@ -230,7 +241,7 @@ class Stratagem:
 
             logger.debug("StSdSetThick(key, %i, %r, %d, %d, %d)", iLayer_,
                     thick_known, mass_thickness, thickness, density)
-            if not self._lib.StSdSetThick(self._key, iLayer_, thick_known_,
+            if not self._lib.StSdSetThick(key, iLayer_, thick_known_,
                                           mass_thickness_, thickness_, density_):
                 self._raise_error("Cannot set thickness")
 
@@ -239,7 +250,30 @@ class Stratagem:
             self._substrate = layer
 
     def _create_standard(self, standard):
-        sample = self.get_sample()
+        # Create new object
+        key_ = c.create_string_buffer(b'standard')
+        self._stobjectnew(key_, standard=True)
+
+        # Set sample
+        for layer in standard.layers:
+            self._add_layer(layer, substrate=False, key=key_)
+        self._add_layer(standard.substrate, substrate=True, key=key_)
+
+        # Save
+        filename = next(tempfile._get_candidate_names()) + '.tfs'
+        filepath = os.path.join(self.get_standard_directory(), filename)
+
+        filepath_ = c.create_string_buffer(filepath.encode('ascii'))
+        logger.debug('StObjectWriteFile(key, %s)', filepath)
+        if not self._lib.StObjectWriteFile(key_, filepath_):
+            self._raise_error("Cannot save standard")
+
+        # Delete object
+        self._lib.StObjectDelete(key_)
+
+        self._tmpstandards.append(filepath)
+
+        return filepath
 
     def add_experiment(self, experiment):
         """

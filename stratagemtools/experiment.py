@@ -49,7 +49,7 @@ class Experiment:
             * empty string for pure standard
             * standard name which correspond to the filename of the standard
               saved in the standard directory
-            * a :class:`dict` of atomic number / weight fraction
+            * a :class:`.Sample`
             
         :arg analyzed: whether to use this experiment in the calculations
         """

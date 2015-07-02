@@ -14,6 +14,8 @@ import logging
 import os
 import ctypes as c
 import math
+import tempfile
+import shutil
 
 # Third party modules.
 
@@ -34,10 +36,13 @@ class TestStratagem(unittest.TestCase):
         self.s = Stratagem()
         self.s.set_geometry(math.radians(40.0), 0.0, 0.0)
 
+        self.tmpdir = tempfile.mkdtemp()
+
     def tearDown(self):
         unittest.TestCase.tearDown(self)
 
         self.s.close()
+        shutil.rmtree(self.tmpdir, ignore_errors=True)
 
     def _create_sample_known_thickness(self):
         sample = Sample({79:1.0})
@@ -346,6 +351,27 @@ class TestStratagem(unittest.TestCase):
         self.assertAlmostEqual(1.24978e-5, rzs[1], 4)
         self.assertAlmostEqual(2.0575, generated[1], 4)
         self.assertAlmostEqual(2.0438, emitted[1], 4)
+
+    @unittest.skipUnless(os.name == 'nt', 'Test can only be ran under Windows platform')
+    def teststandard_sample(self):
+        self.s.set_standard_directory(self.tmpdir)
+
+        sample = Sample({79:1.0})
+        sample.add_layer({13:1.0}, thickness_m=None)
+
+        std = Sample({13: 0.5293, 8: 0.4707})
+        exp0 = Experiment(13, LINE_KA, 25.0e3, 0.008347815, standard=std)
+        exp1 = Experiment(79, LINE_MA, 25.0e3, 0.981343858)
+
+        self.s.set_sample(sample)
+        self.s.add_experiment(exp0)
+        self.s.add_experiment(exp1)
+
+        newsample = self.s.compute()
+
+        self.assertEqual(1, len(newsample.layers))
+        self.assertAlmostEqual(13.59e-9, newsample.get_layer(0).thickness_m, 9)
+        self.assertAlmostEqual(1.0, newsample.get_layer(0).composition[13], 4)
 
 if __name__ == '__main__': #pragma: no cover
     logging.getLogger().setLevel(logging.DEBUG)
