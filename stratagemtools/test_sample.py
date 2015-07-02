@@ -15,20 +15,22 @@ import logging
 # Third party modules.
 
 # Local modules.
-from stratagemtools.layer import Layer
+from stratagemtools.sample import Sample
 
 # Globals and constants variables.
 
-class TestLayer(unittest.TestCase):
+class TestSample(unittest.TestCase):
 
     def setUp(self):
         unittest.TestCase.setUp(self)
 
+        self.sample = Sample({1: 1.0})
+
         composition = {29: 0.5, 30: 0.4}
         density_kg_m3 = 7.336 * 1000.0
-        self.l1 = Layer(composition, thickness_m=5.0e-4, density_kg_m3=density_kg_m3)
-        self.l2 = Layer(composition, mass_thickness_kg_m2=3.668, density_kg_m3=density_kg_m3)
-        self.l3 = Layer(composition, density_kg_m3=density_kg_m3)
+        self.l1 = self.sample.add_layer(composition, thickness_m=5.0e-4, density_kg_m3=density_kg_m3)
+        self.l2 = self.sample.add_layer(composition, mass_thickness_kg_m2=3.668, density_kg_m3=density_kg_m3)
+        self.l3 = self.sample.add_layer(composition, density_kg_m3=density_kg_m3)
 
     def tearDown(self):
         unittest.TestCase.tearDown(self)

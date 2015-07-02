@@ -51,7 +51,7 @@ except ImportError:
 # Third party modules.
 
 # Local modules.
-from stratagemtools.layer import Layer
+from stratagemtools.sample import Sample
 from stratagemtools.element_properties import \
     atomic_mass_kg_mol, mass_density_kg_m3
 
@@ -147,7 +147,24 @@ class Stratagem:
         self._substrate = None
         self._experiments = {} # analyzed experiments
 
-    def add_layer(self, layer, substrate=False):
+    def set_sample(self, sample):
+        self.reset()
+
+        for layer in sample.layers:
+            self._add_layer(layer, substrate=False)
+
+        self._add_layer(sample.substrate, substrate=True)
+
+    def get_sample(self):
+        sample = Sample(self._substrate.composition)
+
+        for layer in self._layers:
+            sample.add_layer(layer.composition, layer.thickness_m,
+                             layer.mass_thickness_kg_m2, layer.density_kg_m3)
+
+        return sample
+
+    def _add_layer(self, layer, substrate=False):
         """
         Adds a layer from top to bottom. 
         The last layer added is considered as the substrate.
@@ -219,16 +236,8 @@ class Stratagem:
         else:
             self._substrate = layer
 
-    def add_substrate(self, layer):
-        """
-        Adds a layer as the substrate.
-        """
-        if layer is None:
-            raise ValueError("The layer cannot be None")
-        if self._substrate is not None:
-            raise ValueError("A substrate was already defined.")
-
-        self.add_layer(layer, substrate=True)
+    def _create_standard(self, composition):
+        pass
 
     def add_experiment(self, experiment):
         """
@@ -249,6 +258,8 @@ class Stratagem:
             self._raise_error("Cannot add atomic number and line")
 
         standard = experiment.standard
+        if isinstance(standard, dict):
+            standard = self._create_standard(standard)
         standard_ = c.create_string_buffer(standard.encode('ascii'))
         logger.debug('StEdSetLine(key, %i, %i, %i, %s)', iElt_.value, iLine_.value, klm_.value, standard)
         if not self._lib.StEdSetLine(self._key, iElt_, iLine_, klm_, standard_):
@@ -549,18 +560,15 @@ class Stratagem:
                                           c.byref(density)):
                 self._raise_error("Cannot get thickness")
 
-            return Layer(composition,
-                         thickness.value / 1e10,
-                         mass_thickness.value * 10.0,
-                         density.value * 1e3)
+            return (composition, thickness.value / 1e10,
+                    mass_thickness.value * 10.0, density.value * 1e3)
 
-        layers = {}
+        sample = Sample(get_layer(len(self._layers), self._substrate)[0])
+
         for layer, ilayer in self._layers.items():
-            layers[layer] = get_layer(ilayer, layer)
+            sample.add_layer(*get_layer(ilayer, layer))
 
-        substrate = get_layer(ilayer + 1, self._substrate)
-
-        return layers, substrate
+        return sample
 
     def compute_prz(self, maxdepth_m=None, bins=100):
         """

@@ -1,21 +1,9 @@
 #!/usr/bin/env python
-"""
-================================================================================
-:mod:`layer` -- A layer
-================================================================================
-
-.. module:: layer
-   :synopsis: A layer
-
-.. inheritance-diagram:: layer
-
-"""
 
 # Script information for the file.
 __author__ = "Philippe T. Pinard"
 __email__ = "philippe.pinard@gmail.com"
-__version__ = "0.1"
-__copyright__ = "Copyright (c) 2011 Philippe T. Pinard"
+__copyright__ = "Copyright (c) 2015 Philippe T. Pinard"
 __license__ = "GPL v3"
 
 # Standard library modules.
@@ -23,13 +11,13 @@ __license__ = "GPL v3"
 # Third party modules.
 
 # Local modules.
-from stratagemtools.element_properties import symbol, mass_density_kg_m3
+import stratagemtools.element_properties as ep
 
 # Globals and constants variables.
 
-class Layer:
+class _Layer:
 
-    def __init__(self, composition={}, thickness_m=None,
+    def __init__(self, composition, thickness_m=None,
                  mass_thickness_kg_m2=None, density_kg_m3=None):
         """
         Creates a new layer or substrate.
@@ -47,17 +35,13 @@ class Layer:
             If the density is less or equal to zero, the weighted density based
             on the concentration is used.
         """
-        is_composition_known = True
-        for z, wf in composition.items():
-            if wf is None:
-                is_composition_known = False
-                break
+        is_composition_known = None not in composition.values()
         self._composition = composition.copy()
 
         if density_kg_m3 is None and is_composition_known:
             density_kg_m3 = 0.0
             for z, wf in composition.items():
-                density_kg_m3 += wf / mass_density_kg_m3(z)
+                density_kg_m3 += wf / ep.mass_density_kg_m3(z)
             density_kg_m3 = 1.0 / density_kg_m3
         self._density_kg_m3 = density_kg_m3
         self._is_density_known = density_kg_m3 is not None
@@ -77,7 +61,7 @@ class Layer:
             mass_thickness_kg_m2 is not None
 
     def __repr__(self):
-        comp_str = ', '.join('%s: %s' % (symbol(z), wf) \
+        comp_str = ', '.join('%s: %s' % (ep.symbol(z), wf) \
                              for z, wf in self.composition.items())
         thickness_str = '%s nm' % (self.thickness_m * 1e9,) \
             if self.is_thickness_known() else 'unknown'
@@ -114,3 +98,39 @@ class Layer:
         """
         return self._density_kg_m3
 
+class Sample:
+
+    def __init__(self, composition):
+        """
+        Creates a sample.
+        
+        :arg composition: composition of the substrate as :class:`dict` where
+            the keys are atomic numbers and the values, weight fractions. 
+            If the weight fraction is not known, set is to ``None``.
+        """
+        self._substrate = _Layer(composition)
+        self._layers = []
+
+    def add_layer(self, composition, thickness_m=None,
+                  mass_thickness_kg_m2=None, density_kg_m3=None):
+        layer = _Layer(composition, thickness_m, mass_thickness_kg_m2, density_kg_m3)
+        self._layers.append(layer)
+        return layer
+
+    def pop_layer(self, index):
+        self._layers.pop(index)
+
+    def get_layer(self, index):
+        return self._layers[index]
+
+    @property
+    def composition(self):
+        return self._substate.composition
+
+    @property
+    def substrate(self):
+        return self._substrate
+
+    @property
+    def layers(self):
+        return tuple(self._layers)

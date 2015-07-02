@@ -44,6 +44,13 @@ class Experiment:
         :type line: :class:`int`
         :arg energy_eV: beam energy (in eV)
         :arg kratio: measured k-ratio
+        :arg standard: three options
+        
+            * empty string for pure standard
+            * standard name which correspond to the filename of the standard
+              saved in the standard directory
+            * a :class:`dict` of atomic number / weight fraction
+            
         :arg analyzed: whether to use this experiment in the calculations
         """
         self._z = z

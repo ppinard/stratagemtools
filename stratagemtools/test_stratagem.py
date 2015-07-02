@@ -19,7 +19,7 @@ import math
 
 # Local modules.
 from stratagemtools.stratagem import Stratagem, StratagemError
-from stratagemtools.layer import Layer
+from stratagemtools.sample import Sample
 from stratagemtools.experiment import Experiment
 
 # Globals and constants variables.
@@ -32,59 +32,38 @@ class TestStratagem(unittest.TestCase):
         unittest.TestCase.setUp(self)
 
         self.s = Stratagem()
+        self.s.set_geometry(math.radians(40.0), 0.0, 0.0)
 
     def tearDown(self):
         unittest.TestCase.tearDown(self)
 
         self.s.close()
 
-    def _setup_known_thickness(self):
-        film = Layer({13:1.0}, thickness_m=20e-9)
-        self.s.add_layer(film)
-
-        subs = Layer({79:1.0})
-        self.s.add_substrate(subs)
+    def _create_sample_known_thickness(self):
+        sample = Sample({79:1.0})
+        sample.add_layer({13:1.0}, thickness_m=20e-9)
 
         exp0 = Experiment(13, LINE_KA, 25.0e3, 0.25)
-        self.s.add_experiment(exp0)
-
         exp1 = Experiment(79, LINE_MA, 25.0e3)
-        self.s.add_experiment(exp1)
 
-        self.s.set_geometry(math.radians(40.0), 0.0, 0.0)
+        return sample, [exp0, exp1]
 
-        return film, subs, exp0, exp1
-
-    def _setup_unknown_thickness(self):
-        film = Layer({13:1.0}, thickness_m=None)
-        self.s.add_layer(film)
-
-        subs = Layer({79:1.0})
-        self.s.add_substrate(subs)
+    def _create_sample_unknown_thickness(self):
+        sample = Sample({79:1.0})
+        sample.add_layer({13:1.0}, thickness_m=None)
 
         exp0 = Experiment(13, LINE_KA, 25.0e3, 0.008347815)
-        self.s.add_experiment(exp0)
-
         exp1 = Experiment(79, LINE_MA, 25.0e3, 0.981343858)
-        self.s.add_experiment(exp1)
 
-        self.s.set_geometry(math.radians(40.0), 0.0, 0.0)
+        return sample, [exp0, exp1]
 
-        return film, subs, exp0, exp1
-
-    def _setup_substrate(self):
-        subs = Layer({13: 0.5, 79: 0.5})
-        self.s.add_substrate(subs)
+    def _create_sample_substrate(self):
+        sample = Sample({13: 0.5, 79: 0.5})
 
         exp0 = Experiment(13, LINE_KA, 10.0e3)
-        self.s.add_experiment(exp0)
-
         exp1 = Experiment(79, LINE_MA, 10.0e3)
-        self.s.add_experiment(exp1)
 
-        self.s.set_geometry(math.radians(40.0), 0.0, 0.0)
-
-        return subs, exp0, exp1
+        return sample, [exp0, exp1]
 
     @unittest.skipUnless(os.name == 'nt', 'Test can only be ran under Windows platform')
     def test_raise_error(self):
@@ -92,18 +71,16 @@ class TestStratagem(unittest.TestCase):
 
     @unittest.skipUnless(os.name == 'nt', 'Test can only be ran under Windows platform')
     def testadd_layer(self):
-        layer = Layer({13: 0.2, 29: 0.8}, mass_thickness_kg_m2=3.55e-5,
-                      density_kg_m3=2.7e3)
-        self.s.add_layer(layer)
+        sample = Sample({1: 1.0})
+        sample.add_layer({13: 0.2, 29: 0.8}, mass_thickness_kg_m2=3.55e-5,
+                         density_kg_m3=2.7e3)
+        sample.add_layer({6: None, 74: None}, thickness_m=None)
+        sample.add_layer({79:1.0})
 
-        layer = Layer({6: None, 74: None}, thickness_m=None)
-        self.s.add_layer(layer)
-
-        layer = Layer({79:1.0})
-        self.s.add_layer(layer)
+        self.s.set_sample(sample)
 
         # Tests
-        self.assertEqual(3, self.s._lib.StSdGetNbLayers(self.s._key))
+        self.assertEqual(4, self.s._lib.StSdGetNbLayers(self.s._key))
 
         self.assertEqual(2, self.s._lib.StSdGetNbElts(self.s._key, c.c_int(0)))
         self.assertEqual(2, self.s._lib.StSdGetNbElts(self.s._key, c.c_int(1)))
@@ -266,10 +243,14 @@ class TestStratagem(unittest.TestCase):
 
     @unittest.skipUnless(os.name == 'nt', 'Test can only be ran under Windows platform')
     def testcompute_kratio_vs_thickness(self):
-        film, _subs, exp0, exp1 = self._setup_known_thickness()
+        sample, (exp0, exp1) = self._create_sample_known_thickness()
+
+        self.s.set_sample(sample)
+        self.s.add_experiment(exp0)
+        self.s.add_experiment(exp1)
 
         thicknesses, kratios = \
-            self.s.compute_kratio_vs_thickness(film, 0.0, 100.0e-9, 10)
+            self.s.compute_kratio_vs_thickness(sample.get_layer(0), 0.0, 100.0e-9, 10)
 
         self.assertEqual(2, self.s._lib.StGetKvsThicknessUnit())
 
@@ -281,7 +262,11 @@ class TestStratagem(unittest.TestCase):
 
     @unittest.skipUnless(os.name == 'nt', 'Test can only be ran under Windows platform')
     def testcompute_kratio_vs_energy(self):
-        _film, _subs, exp0, exp1 = self._setup_known_thickness()
+        sample, (exp0, exp1) = self._create_sample_known_thickness()
+
+        self.s.set_sample(sample)
+        self.s.add_experiment(exp0)
+        self.s.add_experiment(exp1)
 
         energies, kratios = self.s.compute_kratio_vs_energy(30.0e3, 10)
 
@@ -301,7 +286,11 @@ class TestStratagem(unittest.TestCase):
 
     @unittest.skipUnless(os.name == 'nt', 'Test can only be ran under Windows platform')
     def testcompute_kratios(self):
-        _film, _subs, exp0, exp1 = self._setup_known_thickness()
+        sample, (exp0, exp1) = self._create_sample_known_thickness()
+
+        self.s.set_sample(sample)
+        self.s.add_experiment(exp0)
+        self.s.add_experiment(exp1)
 
         kratios = self.s.compute_kratios()
 
@@ -311,7 +300,11 @@ class TestStratagem(unittest.TestCase):
 
     @unittest.skipUnless(os.name == 'nt', 'Test can only be ran under Windows platform')
     def testcompute_kratios_substrate(self):
-        _subs, exp0, exp1 = self._setup_substrate()
+        sample, (exp0, exp1) = self._create_sample_substrate()
+
+        self.s.set_sample(sample)
+        self.s.add_experiment(exp0)
+        self.s.add_experiment(exp1)
 
         kratios = self.s.compute_kratios()
 
@@ -321,17 +314,25 @@ class TestStratagem(unittest.TestCase):
 
     @unittest.skipUnless(os.name == 'nt', 'Test can only be ran under Windows platform')
     def testcompute(self):
-        film, _subs, _exp0, _exp1 = self._setup_unknown_thickness()
+        sample, (exp0, exp1) = self._create_sample_unknown_thickness()
 
-        layers, _substrate = self.s.compute()
+        self.s.set_sample(sample)
+        self.s.add_experiment(exp0)
+        self.s.add_experiment(exp1)
 
-        self.assertEqual(1, len(layers))
-        self.assertAlmostEqual(20.0e-9, layers[film].thickness_m, 9)
-        self.assertAlmostEqual(1.0, layers[film].composition[13], 4)
+        newsample = self.s.compute()
+
+        self.assertEqual(1, len(newsample.layers))
+        self.assertAlmostEqual(20.0e-9, newsample.get_layer(0).thickness_m, 9)
+        self.assertAlmostEqual(1.0, newsample.get_layer(0).composition[13], 4)
 
     @unittest.skipUnless(os.name == 'nt', 'Test can only be ran under Windows platform')
     def testcompute_prz(self):
-        _subs, exp0, _exp1 = self._setup_substrate()
+        sample, (exp0, exp1) = self._create_sample_substrate()
+
+        self.s.set_sample(sample)
+        self.s.add_experiment(exp0)
+        self.s.add_experiment(exp1)
 
         self.s.set_fluorescence(FLUORESCENCE_LINE_CONT)
         self.s.set_prz_mode(PRZMODE_PAP)
