@@ -190,36 +190,36 @@ class Stratagem:
             key = self._key
 
         logger.debug("StSdAddLayer(key)")
-        iLayer_ = self._lib.StSdGetNbLayers(key)
+        ilayer_ = self._lib.StSdGetNbLayers(key)
 
-        logger.debug("StSdAddLayer(key, %i)", iLayer_)
-        if not self._lib.StSdAddLayer(key, iLayer_):
+        logger.debug("StSdAddLayer(key, %i)", ilayer_)
+        if not self._lib.StSdAddLayer(key, ilayer_):
             self._raise_error("Cannot add layer")
 
         for i, value in enumerate(layer.composition.items()):
-            iElt_ = c.c_int(i)
-            logger.debug("StSdAddElt(key, %i, %i)", iLayer_, i)
-            if not self._lib.StSdAddElt(key, iLayer_, iElt_):
+            ielt_ = c.c_int(i)
+            logger.debug("StSdAddElt(key, %i, %i)", ilayer_, i)
+            if not self._lib.StSdAddElt(key, ilayer_, ielt_):
                 self._raise_error("Cannot add element")
 
             z, wf = value
             nra_ = c.c_int(z)
-            logger.debug("StSdSetNrAtom(key, %i, %i, %i)", iLayer_, i, z)
-            if not self._lib.StSdSetNrAtom(key, iLayer_, iElt_, nra_):
+            logger.debug("StSdSetNrAtom(key, %i, %i, %i)", ilayer_, i, z)
+            if not self._lib.StSdSetNrAtom(key, ilayer_, ielt_, nra_):
                 self._raise_error("Cannot set atomic number")
 
             if wf is not None:
                 flag = CONCENTRATION_FLAG_KNOWN
 
                 wf_ = c.c_double(wf)
-                logger.debug("StSdSetConc(key, %i, %i, %f)", iLayer_, i, wf)
-                if not self._lib.StSdSetConc(key, iLayer_, iElt_, wf_):
+                logger.debug("StSdSetConc(key, %i, %i, %f)", ilayer_, i, wf)
+                if not self._lib.StSdSetConc(key, ilayer_, ielt_, wf_):
                     self._raise_error("Cannot set concentration")
             else:
                 flag = CONCENTRATION_FLAG_UNKNOWN
 
-            logger.debug("StSdSetConcFlag(key, %i, %i, %i)", iLayer_, i, flag)
-            if not self._lib.StSdSetConcFlag(key, iLayer_, iElt_, c.c_int(flag)):
+            logger.debug("StSdSetConcFlag(key, %i, %i, %i)", ilayer_, i, flag)
+            if not self._lib.StSdSetConcFlag(key, ilayer_, ielt_, c.c_int(flag)):
                 self._raise_error("Cannot set concentration flag")
 
         if not substrate:
@@ -241,13 +241,13 @@ class Stratagem:
             thickness_ = c.c_double(thickness)
             mass_thickness_ = c.c_double(mass_thickness)
 
-            logger.debug("StSdSetThick(key, %i, %r, %d, %d, %d)", iLayer_,
+            logger.debug("StSdSetThick(key, %i, %r, %d, %d, %d)", ilayer_,
                     thick_known, mass_thickness, thickness, density)
-            if not self._lib.StSdSetThick(key, iLayer_, thick_known_,
+            if not self._lib.StSdSetThick(key, ilayer_, thick_known_,
                                           mass_thickness_, thickness_, density_):
                 self._raise_error("Cannot set thickness")
 
-        return int(iLayer_)
+        return int(ilayer_)
 
     def _create_standard(self, standard):
         # Create new object
@@ -285,40 +285,40 @@ class Stratagem:
         nra_ = c.c_int(experiment.z)
         klm_ = c.c_int(experiment.line)
         hv_ = c.c_double(experiment.energy_eV / 1e3)
-        iElt_ = c.c_int()
-        iLine_ = c.c_int()
-        iExpK_ = c.c_int()
+        ielt_ = c.c_int()
+        iline_ = c.c_int()
+        iexpk_ = c.c_int()
         logger.debug('StEdAddNrAtomLineHV(key, %i, %i)', experiment.z, experiment.line)
         if not self._lib.StEdAddNrAtomLineHV(self._key, nra_, klm_, hv_,
-                                             c.byref(iElt_), c.byref(iLine_), c.byref(iExpK_)):
+                                             c.byref(ielt_), c.byref(iline_), c.byref(iexpk_)):
             self._raise_error("Cannot add atomic number and line")
 
         standard = experiment.standard
         if isinstance(standard, Sample):
             standard = self._create_standard(standard)
         standard_ = c.create_string_buffer(standard.encode('ascii'))
-        logger.debug('StEdSetLine(key, %i, %i, %i, %s)', iElt_.value, iLine_.value, klm_.value, standard)
-        if not self._lib.StEdSetLine(self._key, iElt_, iLine_, klm_, standard_):
+        logger.debug('StEdSetLine(key, %i, %i, %i, %s)', ielt_.value, iline_.value, klm_.value, standard)
+        if not self._lib.StEdSetLine(self._key, ielt_, iline_, klm_, standard_):
             self._raise_error("Cannot set standard")
 
         analyzed = experiment.is_analyzed()
         analyzed_ = c.c_bool(analyzed)
-        logger.debug("StEdSetAnalyzedFlag(key, %i, %r)", iElt_.value, analyzed)
-        if not self._lib.StEdSetAnalyzedFlag(self._key, iElt_, analyzed_):
+        logger.debug("StEdSetAnalyzedFlag(key, %i, %r)", ielt_.value, analyzed)
+        if not self._lib.StEdSetAnalyzedFlag(self._key, ielt_, analyzed_):
             self._raise_error("Cannot add experiment analyzed flag")
 
         kratio_ = c.c_double(experiment.kratio)
         logger.debug("StEdSetExpK(key, %i, %i, %i, %f, %f, %f, 0.0, 2)",
-                iElt_.value, iLine_.value, iExpK_.value,
+                ielt_.value, iline_.value, iexpk_.value,
                 experiment.energy_eV / 1e3, experiment.energy_eV / 1e3,
                 experiment.kratio)
-        if not self._lib.StEdSetExpK(self._key, iElt_, iLine_, iExpK_,
+        if not self._lib.StEdSetExpK(self._key, ielt_, iline_, iexpk_,
                                      hv_, hv_, kratio_, c.c_double(0.0),
                                      c.c_int(2)):
             self._raise_error("Cannot set experiment k-ratio")
 
         if experiment.is_analyzed():
-            indexes = (iElt_.value, iLine_.value, iExpK_.value)
+            indexes = (ielt_.value, iline_.value, iexpk_.value)
             self._experiments.setdefault(experiment, indexes)
 
     def get_experiments(self):
@@ -421,8 +421,8 @@ class Stratagem:
 
         if layer not in self._layers:
             raise ValueError("Unknown layer")
-        iLayer = self._layers[layer]
-        iLayer_ = c.c_int(iLayer)
+        ilayer = self._layers[layer]
+        ilayer_ = c.c_int(ilayer)
 
         step_ = c.c_int(step)
         logger.debug('StSetNbComputedHV(%i)', step)
@@ -432,8 +432,8 @@ class Stratagem:
         low_ = c.c_double(thickness_low_m * 1e9)
         high_ = c.c_double(thickness_high_m * 1e9)
         logger.debug('StComputeKvsThickness(key, %i, %f, %f)',
-                iLayer, thickness_low_m * 1e9, thickness_high_m * 1e9)
-        if not self._lib.StComputeKvsThickness(self._key, iLayer_, low_, high_):
+                ilayer, thickness_low_m * 1e9, thickness_high_m * 1e9)
+        if not self._lib.StComputeKvsThickness(self._key, ilayer_, low_, high_):
             self._raise_error("Cannot compute k-ratio vs thickness")
 
         # Fetch results
@@ -450,11 +450,11 @@ class Stratagem:
             thicknesses.append(thick_.value)
 
             for experiment, indexes in self._experiments.items():
-                iElt_ = c.c_int(indexes[0])
-                iLine_ = c.c_int(indexes[1])
+                ielt_ = c.c_int(indexes[0])
+                iline_ = c.c_int(indexes[1])
                 iHv_ = c.c_int(indexes[2])
 
-                if not self._lib.StGetKvsT_K(self._key, i_, iElt_, iLine_,
+                if not self._lib.StGetKvsT_K(self._key, i_, ielt_, iline_,
                                              iHv_, c.byref(k_)):
                     self._raise_error("Cannot get k-ratio")
                 kratios.setdefault(experiment, []).append(k_.value)
@@ -498,10 +498,10 @@ class Stratagem:
             hv_ = c.c_double(hv)
 
             for experiment, indexes in self._experiments.items():
-                iElt_ = c.c_int(indexes[0])
-                iLine_ = c.c_int(indexes[1])
+                ielt_ = c.c_int(indexes[0])
+                iline_ = c.c_int(indexes[1])
 
-                if not self._lib.StKvsHvOrRx(self._key, iElt_, iLine_, hv_, bHV_, c.byref(k_)):
+                if not self._lib.StKvsHvOrRx(self._key, ielt_, iline_, hv_, bHV_, c.byref(k_)):
                     self._raise_error("Cannot get k-ratio")
 
                 kratios.setdefault(experiment, []).append(k_.value)
@@ -706,9 +706,9 @@ class Stratagem:
             increment_kg_m2 = (maxdepth_m * self._substrate[0].density_kg_m3) / bins
 
             # Indexes
-            iElt_ = c.c_int(indexes[0])
-            iLine_ = c.c_int(indexes[1])
-            iHV_ = c.c_int(0)
+            ielt_ = c.c_int(indexes[0])
+            iline_ = c.c_int(indexes[1])
+            ihv_ = c.c_int(0)
 
             rzs = []
             ys_generated = []
@@ -720,13 +720,13 @@ class Stratagem:
 
                 y_ = c.c_double()
                 bUseExp_ = c.c_bool(True)
-                self._lib.StPhiRhoZ(self._key, iElt_, iLine_, iHV_, rz_,
+                self._lib.StPhiRhoZ(self._key, ielt_, iline_, ihv_, rz_,
                                     bUseExp_, c.byref(y_))
                 ys_emitted.append(y_.value)
 
                 y_ = c.c_double()
                 bUseExp_ = c.c_bool(False)
-                self._lib.StPhiRhoZ(self._key, iElt_, iLine_, iHV_, rz_,
+                self._lib.StPhiRhoZ(self._key, ielt_, iline_, ihv_, rz_,
                                     bUseExp_, c.byref(y_))
                 ys_generated.append(y_.value)
 
