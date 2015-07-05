@@ -159,12 +159,14 @@ class Stratagem:
         self.reset()
 
         for layer in sample.layers:
-            self._add_layer(layer, substrate=False)
+            index = self._add_layer(layer, substrate=False)
+            self._layers.setdefault(layer, index)
 
-        self._add_layer(sample.substrate, substrate=True)
+        index = self._add_layer(sample.substrate, substrate=True)
+        self._substrate = (sample.substrate, index)
 
     def get_sample(self):
-        sample = Sample(self._substrate.composition)
+        sample = Sample(self._substrate[0].composition)
 
         for layer in self._layers:
             sample.add_layer(layer.composition, layer.thickness_m,
@@ -245,9 +247,7 @@ class Stratagem:
                                           mass_thickness_, thickness_, density_):
                 self._raise_error("Cannot set thickness")
 
-            self._layers.setdefault(layer, int(iLayer_))
-        else:
-            self._substrate = layer
+        return int(iLayer_)
 
     def _create_standard(self, standard):
         # Create new object
@@ -609,7 +609,7 @@ class Stratagem:
         thickness = c.c_double()
         density = c.c_double()
 
-        def get_layer(ilayer, layer):
+        def get_layer(layer, ilayer):
             ilayer_ = c.c_int(ilayer)
 
             logger.debug('StSdGetNbElts(key, %i)' % ilayer)
@@ -640,10 +640,10 @@ class Stratagem:
             return (composition, thickness.value / 1e10,
                     mass_thickness.value * 10.0, density.value * 1e3)
 
-        sample = Sample(get_layer(len(self._layers), self._substrate)[0])
+        sample = Sample(get_layer(*self._substrate)[0])
 
         for layer, ilayer in self._layers.items():
-            sample.add_layer(*get_layer(ilayer, layer))
+            sample.add_layer(*get_layer(layer, ilayer))
 
         return sample
 
@@ -695,7 +695,7 @@ class Stratagem:
                 maxdepth_m = 0.0
                 energy_keV = experiment.energy_eV / 1e3
 
-                for z, fraction in self._substrate.composition.items():
+                for z, fraction in self._substrate[0].composition.items():
                     dr = (0.0276 * atomic_mass_kg_mol(z) * 1e3 * energy_keV ** 1.67) / \
                           (z ** 0.89 * mass_density_kg_m3(z) / 1e3)
                     maxdepth_m += fraction / (dr * 1e-6)
@@ -703,7 +703,7 @@ class Stratagem:
                 maxdepth_m = 1.0 / maxdepth_m
                 maxdepth_m *= 1.5 # safety factor
 
-            increment_kg_m2 = (maxdepth_m * self._substrate.density_kg_m3) / bins
+            increment_kg_m2 = (maxdepth_m * self._substrate[0].density_kg_m3) / bins
 
             # Indexes
             iElt_ = c.c_int(indexes[0])
