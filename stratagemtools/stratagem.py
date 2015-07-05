@@ -80,7 +80,7 @@ CONCENTRATION_FLAG_DIFFERENCE = 4
 class StratagemError(Exception):
     pass
 
-def check_key(method):
+def _check_key(method):
     @functools.wraps(method)
     def wrapper(self, *args, **kwargs):
         if self._key is None:
@@ -193,7 +193,7 @@ class Stratagem:
         self._experiments.clear() # analyzed experiments
         self._tmpstandards.clear()
 
-    @check_key
+    @_check_key
     def set_sample(self, sample):
         self.reset()
 
@@ -204,7 +204,7 @@ class Stratagem:
         index = self._add_layer(sample.substrate, substrate=True)
         self._substrate = (sample.substrate, index)
 
-    @check_key
+    @_check_key
     def get_sample(self):
         sample = Sample(self._substrate[0].composition)
 
@@ -314,7 +314,7 @@ class Stratagem:
 
         return filepath
 
-    @check_key
+    @_check_key
     def add_experiment(self, experiment):
         """
         Add an experiment, measurements of k-ratio at different energies.
@@ -361,7 +361,7 @@ class Stratagem:
             indexes = (ielt_.value, iline_.value, iexpk_.value)
             self._experiments.setdefault(experiment, indexes)
 
-    @check_key
+    @_check_key
     def add_experiments(self, *exps):
         for exp in exps:
             self.add_experiment(exp)
@@ -369,7 +369,7 @@ class Stratagem:
     def get_experiments(self):
         return tuple(self._experiments.keys())
 
-    @check_key
+    @_check_key
     def set_geometry(self, toa, tilt, azimuth):
         """
         Sets the geometry.
@@ -385,7 +385,7 @@ class Stratagem:
         if not self._lib.StSetGeomParams(self._key, toa_, tilt_, azimuth_):
             self._raise_error("Cannot set geometry parameters")
 
-    @check_key
+    @_check_key
     def get_geometry(self):
         """
         Returns the geometry.
@@ -405,7 +405,7 @@ class Stratagem:
 
     geometry = property(get_geometry)
 
-    @check_key
+    @_check_key
     def set_prz_mode(self, mode):
         """
         Sets the type of model to use for the phi-rho-z.
@@ -414,7 +414,7 @@ class Stratagem:
         logger.debug('StSetPrzMode(%i)', mode)
         self._lib.StSetPrzMode(mode_)
 
-    @check_key
+    @_check_key
     def get_prz_mode(self):
         """
         Returns the type of model to use for the phi-rho-z.
@@ -423,7 +423,7 @@ class Stratagem:
 
     prz_mode = property(get_prz_mode, set_prz_mode)
 
-    @check_key
+    @_check_key
     def set_fluorescence(self, flag):
         """
         Sets whether to consider characteristic fluorescence, characteristic
@@ -433,7 +433,7 @@ class Stratagem:
         logger.debug('StSetFluorFlg(%i)', flag)
         self._lib.StSetFluorFlg(flag_)
 
-    @check_key
+    @_check_key
     def get_fluorescence(self):
         """
         Returns whether to consider characteristic fluorescence, characteristic
@@ -443,12 +443,12 @@ class Stratagem:
 
     fluorescence = property(get_fluorescence, set_fluorescence)
 
-    @check_key
+    @_check_key
     def set_standard_directory(self, dirpath):
         dirpath_ = c.create_string_buffer(dirpath.encode('ascii'))
         self._lib.StSetDirectory(c.c_int(1), dirpath_)
 
-    @check_key
+    @_check_key
     def get_standard_directory(self):
         dirpath = (c.c_char * 256)()
         self._lib.StGetDirectory(c.c_int(1), c.byref(dirpath), 256)
@@ -456,7 +456,7 @@ class Stratagem:
 
     standard_directory = property(get_standard_directory, set_standard_directory)
 
-    @check_key
+    @_check_key
     def compute_kratio_vs_thickness(self, layer,
                                     thickness_low_m, thickness_high_m, step):
         """
@@ -515,7 +515,7 @@ class Stratagem:
 
         return thicknesses, kratios
 
-    @check_key
+    @_check_key
     def compute_kratio_vs_energy(self, energy_high_eV, step):
         """
         Computes the variation of the k-ratio as a function of the incident
@@ -565,7 +565,7 @@ class Stratagem:
 
         return energies, kratios
 
-    @check_key
+    @_check_key
     def compute_kratios(self):
         """
         Computes the kratios of the different experiments.
@@ -577,7 +577,7 @@ class Stratagem:
         else:
             return self._compute_kratios_multilayers()
 
-    @check_key
+    @_check_key
     def _compute_kratios_multilayers(self):
         """
         Computes the kratios using the :meth:`compute_kratio_vs_thickness`.
@@ -603,7 +603,7 @@ class Stratagem:
 
         return output
 
-    @check_key
+    @_check_key
     def _compute_kratios_substrate(self):
         """
         Computes the kratios using the :meth:`compute_kratio_vs_energy`.
@@ -628,7 +628,7 @@ class Stratagem:
 
         return output
 
-    @check_key
+    @_check_key
     def compute(self, iteration_max=50):
         """
         Computes the thicknesses of each layer.
@@ -706,7 +706,7 @@ class Stratagem:
 
         return sample
 
-    @check_key
+    @_check_key
     def compute_prz(self, maxdepth_m=None, bins=100):
         """
         Compute :math:`\\phi(\\rho z)` of all experiments.
