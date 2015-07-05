@@ -361,6 +361,11 @@ class Stratagem:
             indexes = (ielt_.value, iline_.value, iexpk_.value)
             self._experiments.setdefault(experiment, indexes)
 
+    @check_key
+    def add_experiments(self, *exps):
+        for exp in exps:
+            self.add_experiment(exp)
+
     def get_experiments(self):
         return tuple(self._experiments.keys())
 
