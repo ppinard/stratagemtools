@@ -15,7 +15,7 @@
 __author__ = "Philippe T. Pinard"
 __email__ = "philippe.pinard@gmailogger.com"
 __version__ = "0.1"
-__copyright__ = "Copyright (c) 2011 Philippe T. Pinard"
+__copyright__ = "Copyright (c) 2011-2015 Philippe T. Pinard"
 __license__ = "GPL v3"
 
 # Standard library modules.
@@ -24,7 +24,10 @@ import ctypes as c
 import logging
 logger = logging.getLogger(__name__)
 from operator import attrgetter
-import tempfile
+import random
+import string
+import functools
+
 try:
     import winreg
 except ImportError:
@@ -77,6 +80,14 @@ CONCENTRATION_FLAG_DIFFERENCE = 4
 class StratagemError(Exception):
     pass
 
+def check_key(method):
+    @functools.wraps(method)
+    def wrapper(self, *args, **kwargs):
+        if self._key is None:
+            raise StratagemError('Not initialize. Call init().')
+        return method(self, *args, **kwargs)
+    return wrapper
+
 class Stratagem:
     def __init__(self, dll_path=None):
         """
@@ -94,27 +105,39 @@ class Stratagem:
         logger.debug("dll=%s", dll_path)
         self._lib = c.WinDLL(dll_path)
 
+        logger.debug("StEnableErrorDisplay(%r)", True)
+        self._lib.StEnableErrorDisplay(c.c_bool(True))
+
+        self._key = None
+        self._layers = {} # layer: index
+        self._substrate = None
+        self._experiments = {} # analyzed experiments
         self._tmpstandards = []
 
-        self._key = c.create_string_buffer(b'DemoSample')
-        self._stobjectnew(self._key)
-        self._stenableerrordisplay(False)
+    def __enter__(self):
+        self.init()
+        return self
 
-        self.reset()
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.close()
+        return False
 
-    def _stobjectnew(self, key, standard=False):
-        bNormal_ = c.c_bool(not standard)
-        iniFlags_ = c.c_int(0)
+    def _stobjectnew(self, key=None, standard=False):
+        if key is None:
+            characters = string.ascii_lowercase
+            key = ''.join(random.choice(characters) for _ in range(8))
+            key = key.encode('ascii')
+        if not isinstance(key, c.c_byte):
+            key = c.create_string_buffer(key)
+
+        bnormal_ = c.c_bool(not standard)
+        iniflags_ = c.c_int(0)
 
         logger.debug("StObjectNew(key, %r, %i)", not standard, 0)
-        if not self._lib.StObjectNew(key, bNormal_, iniFlags_):
+        if not self._lib.StObjectNew(key, bnormal_, iniflags_):
             self._raise_error("Cannot create object")
 
-    def _stenableerrordisplay(self, enable):
-        enable_ = c.c_bool(enable)
-
-        logger.debug("StEnableErrorDisplay(%r)", enable)
-        self._lib.StEnableErrorDisplay(enable_)
+        return key
 
     def _raise_error(self, alternate=''):
         errnum_ = c.c_ulong()
@@ -134,27 +157,43 @@ class Stratagem:
         else:
             raise StratagemError(alternate)
 
+    def init(self):
+        """
+        Initializes and setups STRATAGem. 
+        """
+        if self._key is not None:
+            raise RuntimeError('Already initialized. Call close() first.')
+
+        self._key = self._stobjectnew()
+        self.reset()
+
     def close(self):
         """
         Closes the connection to the Statagem DLlogger.
         """
-        logger.debug('StObjectDelete(key)')
-        self._lib.StObjectDelete(self._key)
-        del self._lib
+        if self._key is not None:
+            logger.debug('StObjectDelete(key)')
+            self._lib.StObjectDelete(self._key)
+            self._key = None
 
         for filepath in self._tmpstandards:
             os.remove(filepath)
             logger.debug('Remove temporary standard: %s', filepath)
 
+        self.reset()
+
     def reset(self):
         """
         Resets all parameters to the defaults, remove all layers and experiments.
         """
-        self._lib.StObjectReset(self._key)
-        self._layers = {} # layer: index
+        if self._key:
+            self._lib.StObjectReset(self._key)
+        self._layers.clear() # layer: index
         self._substrate = None
-        self._experiments = {} # analyzed experiments
+        self._experiments.clear() # analyzed experiments
+        self._tmpstandards.clear()
 
+    @check_key
     def set_sample(self, sample):
         self.reset()
 
@@ -165,6 +204,7 @@ class Stratagem:
         index = self._add_layer(sample.substrate, substrate=True)
         self._substrate = (sample.substrate, index)
 
+    @check_key
     def get_sample(self):
         sample = Sample(self._substrate[0].composition)
 
@@ -251,8 +291,7 @@ class Stratagem:
 
     def _create_standard(self, standard):
         # Create new object
-        key_ = c.create_string_buffer(b'standard')
-        self._stobjectnew(key_, standard=True)
+        key_ = self._stobjectnew(standard=True)
 
         # Set sample
         for layer in standard.layers:
@@ -260,7 +299,7 @@ class Stratagem:
         self._add_layer(standard.substrate, substrate=True, key=key_)
 
         # Save
-        filename = next(tempfile._get_candidate_names()) + '.tfs'
+        filename = key_.value.decode('ascii') + '.tfs'
         filepath = os.path.join(self.get_standard_directory(), filename)
 
         filepath_ = c.create_string_buffer(filepath.encode('ascii'))
@@ -275,6 +314,7 @@ class Stratagem:
 
         return filepath
 
+    @check_key
     def add_experiment(self, experiment):
         """
         Add an experiment, measurements of k-ratio at different energies.
@@ -324,6 +364,7 @@ class Stratagem:
     def get_experiments(self):
         return tuple(self._experiments.keys())
 
+    @check_key
     def set_geometry(self, toa, tilt, azimuth):
         """
         Sets the geometry.
@@ -339,6 +380,7 @@ class Stratagem:
         if not self._lib.StSetGeomParams(self._key, toa_, tilt_, azimuth_):
             self._raise_error("Cannot set geometry parameters")
 
+    @check_key
     def get_geometry(self):
         """
         Returns the geometry.
@@ -358,6 +400,7 @@ class Stratagem:
 
     geometry = property(get_geometry)
 
+    @check_key
     def set_prz_mode(self, mode):
         """
         Sets the type of model to use for the phi-rho-z.
@@ -366,6 +409,7 @@ class Stratagem:
         logger.debug('StSetPrzMode(%i)', mode)
         self._lib.StSetPrzMode(mode_)
 
+    @check_key
     def get_prz_mode(self):
         """
         Returns the type of model to use for the phi-rho-z.
@@ -374,6 +418,7 @@ class Stratagem:
 
     prz_mode = property(get_prz_mode, set_prz_mode)
 
+    @check_key
     def set_fluorescence(self, flag):
         """
         Sets whether to consider characteristic fluorescence, characteristic
@@ -383,6 +428,7 @@ class Stratagem:
         logger.debug('StSetFluorFlg(%i)', flag)
         self._lib.StSetFluorFlg(flag_)
 
+    @check_key
     def get_fluorescence(self):
         """
         Returns whether to consider characteristic fluorescence, characteristic
@@ -392,10 +438,12 @@ class Stratagem:
 
     fluorescence = property(get_fluorescence, set_fluorescence)
 
+    @check_key
     def set_standard_directory(self, dirpath):
         dirpath_ = c.create_string_buffer(dirpath.encode('ascii'))
         self._lib.StSetDirectory(c.c_int(1), dirpath_)
 
+    @check_key
     def get_standard_directory(self):
         dirpath = (c.c_char * 256)()
         self._lib.StGetDirectory(c.c_int(1), c.byref(dirpath), 256)
@@ -403,6 +451,7 @@ class Stratagem:
 
     standard_directory = property(get_standard_directory, set_standard_directory)
 
+    @check_key
     def compute_kratio_vs_thickness(self, layer,
                                     thickness_low_m, thickness_high_m, step):
         """
@@ -461,6 +510,7 @@ class Stratagem:
 
         return thicknesses, kratios
 
+    @check_key
     def compute_kratio_vs_energy(self, energy_high_eV, step):
         """
         Computes the variation of the k-ratio as a function of the incident
@@ -510,6 +560,7 @@ class Stratagem:
 
         return energies, kratios
 
+    @check_key
     def compute_kratios(self):
         """
         Computes the kratios of the different experiments.
@@ -521,6 +572,7 @@ class Stratagem:
         else:
             return self._compute_kratios_multilayers()
 
+    @check_key
     def _compute_kratios_multilayers(self):
         """
         Computes the kratios using the :meth:`compute_kratio_vs_thickness`.
@@ -546,6 +598,7 @@ class Stratagem:
 
         return output
 
+    @check_key
     def _compute_kratios_substrate(self):
         """
         Computes the kratios using the :meth:`compute_kratio_vs_energy`.
@@ -570,6 +623,7 @@ class Stratagem:
 
         return output
 
+    @check_key
     def compute(self, iteration_max=50):
         """
         Computes the thicknesses of each layer.
@@ -647,6 +701,7 @@ class Stratagem:
 
         return sample
 
+    @check_key
     def compute_prz(self, maxdepth_m=None, bins=100):
         """
         Compute :math:`\\phi(\\rho z)` of all experiments.
