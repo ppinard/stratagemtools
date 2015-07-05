@@ -356,6 +356,22 @@ class TestStratagem(unittest.TestCase):
         self.assertAlmostEqual(1.0, newsample.get_layer(0).composition[13], 4)
 
     @unittest.skipUnless(os.name == 'nt', 'Test can only be ran under Windows platform')
+    def testcompute_dummyexperiment(self):
+        sample, (exp0, _exp1) = self._create_sample_unknown_thickness()
+
+        with self.s:
+            self.s.set_sample(sample)
+            self.s.add_experiment(exp0)
+
+            self.s.set_geometry(math.radians(40.0), 0.0, 0.0)
+
+            newsample = self.s.compute()
+
+        self.assertEqual(1, len(newsample.layers))
+        self.assertAlmostEqual(20.0e-9, newsample.get_layer(0).thickness_m, 9)
+        self.assertAlmostEqual(1.0, newsample.get_layer(0).composition[13], 4)
+
+    @unittest.skipUnless(os.name == 'nt', 'Test can only be ran under Windows platform')
     def testcompute_prz(self):
         sample, (exp0, exp1) = self._create_sample_substrate()
 

@@ -56,6 +56,7 @@ except ImportError:
 
 # Local modules.
 from stratagemtools.sample import Sample
+from stratagemtools.experiment import Experiment, LINE_KA
 from stratagemtools.element_properties import \
     atomic_mass_kg_mol, mass_density_kg_m3
 
@@ -111,7 +112,7 @@ class Stratagem:
         self._key = None
         self._layers = {} # layer: index
         self._substrate = None
-        self._experiments = {} # analyzed experiments
+        self._experiments = {} # experiment: (element, line, kratio) indexes
         self._tmpstandards = []
 
     def __enter__(self):
@@ -633,8 +634,22 @@ class Stratagem:
         """
         Computes the thicknesses of each layer.
         
-        :return: :class:`dict` of layer-thicknesses (in nm)
+        :return: :class:`.Sample`
         """
+        # Add missing experiments
+        zs = set(exp.z for exp in self._experiments.keys())
+
+        for layer in list(self._layers.keys()) + [self._substrate[0]]:
+            for z, wf in layer.composition.items():
+                if z in zs:
+                    continue
+                if wf is None:
+                    continue
+                logger.debug('Added dummy experiment for z=%i', z)
+                exp = Experiment(z, LINE_KA, 0.0, analyzed=False) # dummy
+                self.add_experiment(exp)
+
+        # Set iteration maximum
         iteration_max_ = c.c_int(iteration_max)
         logger.debug('StSetMaxNbIter(%i)', iteration_max)
         self._lib.StSetMaxNbIter(iteration_max_)
@@ -642,7 +657,6 @@ class Stratagem:
         # Compute
         logger.debug('StComputeIterpStart(key)')
         if not self._lib.StComputeIterpStart(self._key):
-            self._raise_error()
             self._raise_error("Cannot start iteration")
 
         continue_ = c.c_bool(True)
