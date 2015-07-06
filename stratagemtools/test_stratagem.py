@@ -409,15 +409,19 @@ class TestStratagem(unittest.TestCase):
         exp1 = Experiment(79, LINE_MA, 25.0e3, 0.981343858)
 
         with self.s:
-            self.s.set_standard_directory(self.tmpdir)
+            curdir = self.s.get_standard_directory()
+            try:
+                self.s.set_standard_directory(self.tmpdir)
 
-            self.s.set_sample(sample)
-            self.s.add_experiment(exp0)
-            self.s.add_experiment(exp1)
+                self.s.set_sample(sample)
+                self.s.add_experiment(exp0)
+                self.s.add_experiment(exp1)
 
-            self.s.set_geometry(math.radians(40.0), 0.0, 0.0)
+                self.s.set_geometry(math.radians(40.0), 0.0, 0.0)
 
-            newsample = self.s.compute()
+                newsample = self.s.compute()
+            finally:
+                self.s.set_standard_directory(curdir)
 
         self.assertEqual(1, len(newsample.layers))
         self.assertAlmostEqual(13.59e-9, newsample.get_layer(0).thickness_m, 9)
