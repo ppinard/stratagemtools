@@ -41,18 +41,25 @@ class TestSample(unittest.TestCase):
         self.assertAlmostEqual(3.668, self.l1.mass_thickness_kg_m2, 3)
         self.assertAlmostEqual(7336, self.l1.density_kg_m3, 3)
         self.assertTrue(self.l1.is_thickness_known())
+        self.assertTrue(self.l1.is_composition_known())
 
         self.assertEqual(2, len(list(self.l2.composition)))
         self.assertAlmostEqual(5.0e-4, self.l2.thickness_m, 3)
         self.assertAlmostEqual(3.668, self.l2.mass_thickness_kg_m2, 3)
         self.assertAlmostEqual(7336, self.l2.density_kg_m3, 3)
         self.assertTrue(self.l2.is_thickness_known())
+        self.assertTrue(self.l2.is_composition_known())
 
         self.assertEqual(2, len(list(self.l3.composition)))
         self.assertIsNone(self.l3.thickness_m)
         self.assertIsNone(self.l3.mass_thickness_kg_m2)
         self.assertAlmostEqual(7336, self.l3.density_kg_m3, 3)
         self.assertFalse(self.l3.is_thickness_known())
+        self.assertTrue(self.l3.is_composition_known())
+
+    def testis_composition_known(self):
+        s = Sample({8: None, 10: 0.5, 12: '?'})
+        self.assertFalse(s.substrate.is_composition_known())
 
 if __name__ == '__main__': #pragma: no cover
     logging.getLogger().setLevel(logging.DEBUG)

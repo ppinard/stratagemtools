@@ -55,7 +55,7 @@ except ImportError:
 # Third party modules.
 
 # Local modules.
-from stratagemtools.sample import Sample
+from stratagemtools.sample import Sample, CONC_UNKNOWN, CONC_DIFF
 from stratagemtools.experiment import Experiment, LINE_KA
 from stratagemtools.element_properties import \
     atomic_mass_kg_mol, mass_density_kg_m3
@@ -72,11 +72,11 @@ FLUORESCENCE_NONE = 0
 FLUORESCENCE_LINE = 1
 FLUORESCENCE_LINE_CONT = 2
 
-CONCENTRATION_FLAG_KNOWN = 0
-CONCENTRATION_FLAG_UNKNOWN = 1
-CONCENTRATION_FLAG_STOICHIOMETRIC = 2
-CONCENTRATION_FLAG_TRACE = 3
-CONCENTRATION_FLAG_DIFFERENCE = 4
+_CONCENTRATION_FLAG_KNOWN = 0
+_CONCENTRATION_FLAG_UNKNOWN = 1
+_CONCENTRATION_FLAG_STOICHIOMETRIC = 2
+_CONCENTRATION_FLAG_TRACE = 3
+_CONCENTRATION_FLAG_DIFFERENCE = 4
 
 class StratagemError(Exception):
     pass
@@ -249,15 +249,17 @@ class Stratagem:
             if not self._lib.StSdSetNrAtom(key, ilayer_, ielt_, nra_):
                 self._raise_error("Cannot set atomic number")
 
-            if wf is not None:
-                flag = CONCENTRATION_FLAG_KNOWN
+            if wf is None or wf == CONC_UNKNOWN:
+                flag = _CONCENTRATION_FLAG_UNKNOWN
+            elif wf == CONC_DIFF:
+                flag = _CONCENTRATION_FLAG_DIFFERENCE
+            else:
+                flag = _CONCENTRATION_FLAG_KNOWN
 
                 wf_ = c.c_double(wf)
                 logger.debug("StSdSetConc(key, %i, %i, %f)", ilayer_, i, wf)
                 if not self._lib.StSdSetConc(key, ilayer_, ielt_, wf_):
                     self._raise_error("Cannot set concentration")
-            else:
-                flag = CONCENTRATION_FLAG_UNKNOWN
 
             logger.debug("StSdSetConcFlag(key, %i, %i, %i)", ilayer_, i, flag)
             if not self._lib.StSdSetConcFlag(key, ilayer_, ielt_, c.c_int(flag)):

@@ -14,6 +14,8 @@ __license__ = "GPL v3"
 import stratagemtools.element_properties as ep
 
 # Globals and constants variables.
+CONC_UNKNOWN = None
+CONC_DIFF = '?'
 
 class _Layer:
 
@@ -35,10 +37,11 @@ class _Layer:
             If the density is less or equal to zero, the weighted density based
             on the concentration is used.
         """
-        is_composition_known = None not in composition.values()
+        self._is_composition_known = \
+            all(isinstance(wf, float) for wf in composition.values())
         self._composition = composition.copy()
 
-        if density_kg_m3 is None and is_composition_known:
+        if density_kg_m3 is None and self._is_composition_known:
             density_kg_m3 = 0.0
             for z, wf in composition.items():
                 density_kg_m3 += wf / ep.mass_density_kg_m3(z)
@@ -66,6 +69,9 @@ class _Layer:
         thickness_str = '%s nm' % (self.thickness_m * 1e9,) \
             if self.is_thickness_known() else 'unknown'
         return '<Layer(composition={%s}, thickness=%s)>' % (comp_str, thickness_str)
+
+    def is_composition_known(self):
+        return self._is_composition_known
 
     def is_thickness_known(self):
         return self._is_thickness_known
