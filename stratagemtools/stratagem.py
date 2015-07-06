@@ -103,13 +103,18 @@ class Stratagem:
                 basedir = winreg.QueryValueEx(key, _REGISTRY_VALUENAME)[0] #@UndefinedVariable
             dll_path = os.path.join(basedir, 'bin', 'stratadll.dll')
 
-        logger.debug("dll=%s", dll_path)
-        self._lib = c.WinDLL(dll_path)
+        cwd = os.getcwd()
+        try:
+            logger.debug("dll=%s", dll_path)
+            self._lib = c.WinDLL(dll_path)
+        finally:
+            os.chdir(cwd) # Change back to real cwd
 
         logger.debug("StEnableErrorDisplay(%r)", True)
         self._lib.StEnableErrorDisplay(c.c_bool(True))
 
         self._key = None
+        self._cwd = os.getcwd()
         self._layers = {} # layer: index
         self._substrate = None
         self._experiments = {} # experiment: (element, line, kratio) indexes
@@ -166,11 +171,12 @@ class Stratagem:
             raise RuntimeError('Already initialized. Call close() first.')
 
         self._key = self._stobjectnew()
+        self._cwd = os.getcwd()
         self.reset()
 
     def close(self):
         """
-        Closes the connection to the Statagem DLlogger.
+        Closes the connection to the Statagem DLL.
         """
         if self._key is not None:
             logger.debug('StObjectDelete(key)')
@@ -189,6 +195,7 @@ class Stratagem:
         """
         if self._key:
             self._lib.StObjectReset(self._key)
+        os.chdir(self._cwd)
         self._layers.clear() # layer: index
         self._substrate = None
         self._experiments.clear() # analyzed experiments
