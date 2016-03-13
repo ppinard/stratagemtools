@@ -15,7 +15,7 @@ import logging
 # Third party modules.
 
 # Local modules.
-from stratagemtools.sample import Sample
+from stratagemtools.sample import Sample, composition_from_formula
 
 # Globals and constants variables.
 
@@ -60,6 +60,31 @@ class TestSample(unittest.TestCase):
     def testis_composition_known(self):
         s = Sample({8: None, 10: 0.5, 12: '?'})
         self.assertFalse(s.substrate.is_composition_known())
+    
+    def testcomposition_from_formula(self):
+        weightFractionAl = 0.21358626371988801
+        weightFractionNa = 0.27298103136883051
+        weightFractionB = 0.51343270491128157
+
+        comp = composition_from_formula('Al2Na3B12')
+        self.assertAlmostEqual(weightFractionAl, comp[13], 4)
+        self.assertAlmostEqual(weightFractionNa, comp[11], 4)
+        self.assertAlmostEqual(weightFractionB, comp[5], 4)
+
+        comp = composition_from_formula('Al 2 Na 3 B 12')
+        self.assertAlmostEqual(weightFractionAl, comp[13], 4)
+        self.assertAlmostEqual(weightFractionNa, comp[11], 4)
+        self.assertAlmostEqual(weightFractionB, comp[5], 4)
+
+        comp = composition_from_formula('Al2 Na3 B12')
+        self.assertAlmostEqual(weightFractionAl, comp[13], 4)
+        self.assertAlmostEqual(weightFractionNa, comp[11], 4)
+        self.assertAlmostEqual(weightFractionB, comp[5], 4)
+
+        self.assertRaises(ValueError, composition_from_formula, 'Aq2 Na3 B12')
+
+        comp = composition_from_formula('Al2')
+        self.assertAlmostEqual(1.0, comp[13], 4)
 
 if __name__ == '__main__': #pragma: no cover
     logging.getLogger().setLevel(logging.DEBUG)

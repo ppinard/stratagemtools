@@ -7,8 +7,11 @@ __copyright__ = "Copyright (c) 2015 Philippe T. Pinard"
 __license__ = "GPL v3"
 
 # Standard library modules.
+import string
+from collections import defaultdict
 
 # Third party modules.
+from pyparsing import Word, Group, Optional, OneOrMore
 
 # Local modules.
 import stratagemtools.element_properties as ep
@@ -16,6 +19,37 @@ import stratagemtools.element_properties as ep
 # Globals and constants variables.
 CONC_UNKNOWN = None
 CONC_DIFF = '?'
+
+_symbol = Word(string.ascii_uppercase, string.ascii_lowercase)
+_digit = Word(string.digits + ".")
+_elementRef = Group(_symbol + Optional(_digit, default="1"))
+CHEMICAL_FORMULA_PARSER = OneOrMore(_elementRef)
+
+def composition_from_formula(formula):
+    # Parse chemical formula
+    formulaData = CHEMICAL_FORMULA_PARSER.parseString(formula)
+
+    zs = []
+    atomicfractions = []
+    for symbol, atomicfraction in formulaData:
+        zs.append(ep.atomic_number(symbol=symbol))
+        atomicfractions.append(float(atomicfraction))
+
+    # Calculate total atomic mass
+    totalatomicmass = 0.0
+    for z, atomicfraction in zip(zs, atomicfractions):
+        atomicmass = ep.atomic_mass_kg_mol(z)
+        totalatomicmass += atomicfraction * atomicmass
+
+    # Create composition
+    composition = defaultdict(float)
+
+    for z, atomicfraction in zip(zs, atomicfractions):
+        atomicmass = ep.atomic_mass_kg_mol(z)
+        weightfraction = atomicfraction * atomicmass / totalatomicmass
+        composition[z] += weightfraction
+
+    return composition
 
 class _Layer:
 

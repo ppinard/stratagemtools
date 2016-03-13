@@ -72,7 +72,9 @@ setup(name="stratagemtools",
         ],
 
       packages=find_packages(),
-      zip_safe=True,
+      zip_safe=False,
+      
+      install_requires=['pyparsing'],
 
       test_suite='nose.collector',
 )
