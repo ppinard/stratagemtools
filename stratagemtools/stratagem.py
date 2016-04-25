@@ -90,7 +90,7 @@ def _check_key(method):
     return wrapper
 
 class Stratagem:
-    def __init__(self, dll_path=None):
+    def __init__(self, dll_path=None, display_error=True):
         """
         Initializes the connection to the Stratagem DLlogger.
         One of the following argument must be specified:
@@ -110,8 +110,8 @@ class Stratagem:
         finally:
             os.chdir(cwd) # Change back to real cwd
 
-        logger.debug("StEnableErrorDisplay(%r)", True)
-        self._lib.StEnableErrorDisplay(c.c_bool(True))
+        logger.debug("StEnableErrorDisplay(%r)", display_error)
+        self._lib.StEnableErrorDisplay(c.c_bool(display_error))
 
         self._key = None
         self._cwd = os.getcwd()
