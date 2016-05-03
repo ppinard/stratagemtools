@@ -1,6 +1,18 @@
 stratagemtools
 ==============
 
+.. image:: https://badge.fury.io/py/stratagemtools.svg
+   :target: http://badge.fury.io/py/stratagemtools
+
+.. image:: https://readthedocs.org/projects/stratagemtools/badge/?version=latest
+   :target: https://readthedocs.org/projects/stratagemtools/
+
+.. image:: https://travis-ci.org/ppinard/stratagemtools.svg?branch=master
+   :target: https://travis-ci.org/ppinard/stratagemtools
+   
+.. image:: https://codecov.io/github/ppinard/stratagemtools/coverage.svg?branch=master
+   :target: https://codecov.io/github/ppinard/stratagemtools?branch=master
+
   Requires a legal version of SAMx's STRATAGem installed on a 
   Windows PC to work including the USB dongle.
 
