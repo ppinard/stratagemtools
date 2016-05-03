@@ -1,7 +1,9 @@
+.. _calculate_kratio:
+
 Calculate k-ratios
 ==================
 
-This is a tutorial to calculate the Al and O :math:`\text{K}\alpha` k-ratios 
+This is a tutorial to calculate the Al, O and Si :math:`\text{K}\alpha` k-ratios 
 from a multilayer sample consisting of a Si substrate and 30-nm Al2O3 layer at 
 an accelerating voltage of 15 kV.
 
