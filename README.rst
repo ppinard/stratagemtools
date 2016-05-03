@@ -1,8 +1,8 @@
 stratagemtools
 ==============
 
-.. note:: Requires a legal version of SAMx's STRATAGem installed on a 
-   Windows PC to work including the USB dongle.
+  Requires a legal version of SAMx's STRATAGem installed on a 
+  Windows PC to work including the USB dongle.
 
 *stratagemtools* is a Python interface to SAMx's 
 `STRATAGem <http://www.samx.com/microanalysis/products/stratagem_us.html>`_ 
