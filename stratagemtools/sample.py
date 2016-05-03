@@ -275,7 +275,9 @@ class Sample:
 
     def get_layer(self, index):
         """
-        Returns the layer at *index*.
+        Returns the layer at *index*. 
+        Index *0* is the first layer of the multilayer, while index *-1* is the 
+        last layer, the first one above the substrate.
         
         :arg index: index of the layer
         :type index: :class:`int`
@@ -312,6 +314,7 @@ class Sample:
         """
         Returns a copy of layers of this sample.
         It cannot be modified.
+        The layers are ordered from top to bottom.
         
         :rtype: :class:`tuple`
         """
