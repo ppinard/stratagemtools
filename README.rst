@@ -1,7 +1,7 @@
 stratagemtools
 ==============
 
-.. warning:: Requires a legal version of SAMx's STRATAGem installed on a 
+.. note:: Requires a legal version of SAMx's STRATAGem installed on a 
    Windows PC to work including the USB dongle.
 
 *stratagemtools* is a Python interface to SAMx's 
