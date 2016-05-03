@@ -1,0 +1,2 @@
+include versioneer.py
+include stratagemtools/_version.py
