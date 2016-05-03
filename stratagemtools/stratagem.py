@@ -1,22 +1,6 @@
-#!/usr/bin/env python
 """
-================================================================================
-:mod:`stratagem` -- Stratagem runner
-================================================================================
-
-.. module:: stratagem
-   :synopsis: Stratagem runner
-
-.. inheritance-diagram:: stratagemtools.stratagem
-
+Stratagem library
 """
-
-# Script information for the file.
-__author__ = "Philippe T. Pinard"
-__email__ = "philippe.pinard@gmailogger.com"
-__version__ = "0.1"
-__copyright__ = "Copyright (c) 2011-2015 Philippe T. Pinard"
-__license__ = "GPL v3"
 
 # Standard library modules.
 import os

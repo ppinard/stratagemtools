@@ -1,13 +1,6 @@
 #!/usr/bin/env python
 """ """
 
-# Script information for the file.
-__author__ = "Philippe T. Pinard"
-__email__ = "philippe.pinard@gmail.com"
-__version__ = "0.1"
-__copyright__ = "Copyright (c) 2011 Philippe T. Pinard"
-__license__ = "GPL v3"
-
 # Standard library modules.
 import unittest
 import logging
@@ -60,7 +53,7 @@ class TestSample(unittest.TestCase):
     def testis_composition_known(self):
         s = Sample({8: None, 10: 0.5, 12: '?'})
         self.assertFalse(s.substrate.is_composition_known())
-    
+
     def testcomposition_from_formula(self):
         weightFractionAl = 0.21358626371988801
         weightFractionNa = 0.27298103136883051

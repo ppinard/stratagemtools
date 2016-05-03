@@ -1,10 +1,6 @@
-#!/usr/bin/env python
-
-# Script information for the file.
-__author__ = "Philippe T. Pinard"
-__email__ = "philippe.pinard@gmail.com"
-__copyright__ = "Copyright (c) 2015 Philippe T. Pinard"
-__license__ = "GPL v3"
+"""
+Sample definition
+"""
 
 # Standard library modules.
 import string

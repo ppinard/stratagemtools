@@ -48,14 +48,14 @@ with codecs.open('README.rst', encoding='utf-8') as f:
 
 setup(name="stratagemtools",
       version=find_version('stratagemtools', 'stratagem.py'),
-      description="Interface to STRATAGem",
+      description="Python interface to SAMx STRATAGem",
       long_description=long_description,
 
       author="Philippe T. Pinard",
       author_email="philippe.pinard@gmail.com",
 
-      url='http://stratagemtools.bitbucket.org',
-      license="GPL v3",
+      url='https://github.com/ppinard/stratagemtools',
+      license="MIT",
       keywords='microscopy microanalysis thin-film stratagem samx',
 
       classifiers=[
@@ -64,16 +64,12 @@ setup(name="stratagemtools",
         'Intended Audience :: Science/Research',
         'Operating System :: Microsoft :: Windows',
         'License :: OSI Approved :: GNU General Public License v3 (GPLv3)',
-        'Programming Language :: Python :: 2',
-        'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.3',
         'Topic :: Scientific/Engineering :: Physics',
         ],
 
       packages=find_packages(),
-      zip_safe=False,
-      
+
       install_requires=['pyparsing'],
 
       test_suite='nose.collector',
