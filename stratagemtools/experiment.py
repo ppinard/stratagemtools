@@ -1,6 +1,10 @@
 """
-Experiment
+Definition of an experiment, structure to setup experimental parameters and
+measurements in STRATAGem.
 """
+
+__all__ = ['LINE_KA', 'LINE_KB', 'LINE_LA', 'LINE_LB', 'LINE_MA', 'LINE_MB',
+           'Experiment']
 
 # Standard library modules.
 
@@ -10,32 +14,64 @@ Experiment
 from stratagemtools.element_properties import symbol
 
 # Globals and constants variables.
+
 LINE_KA = 0
+"""X-ray line :math:`\\text{K}\\alpha`"""
+
 LINE_KB = 1
+"""X-ray line :math:`\\text{K}\\beta`"""
+
 LINE_LA = 2
+"""X-ray line :math:`\\text{L}\\alpha`"""
+
 LINE_LB = 3
+"""X-ray line :math:`\\text{L}\\beta`"""
+
 LINE_MA = 4
+"""X-ray line :math:`\\text{M}\\alpha`"""
+
 LINE_MB = 5
+"""X-ray line :math:`\\text{M}\\beta`"""
 
 class Experiment:
+    """
+    Object to store experimental parameters and measurements.
+    Once created an experiment object is immutable.
+    """
+
     def __init__(self, z, line, energy_eV, kratio=0.0, standard='', analyzed=True):
         """
-        Creates a new experiment. 
-        An experiment indicates the measurement conditions and/or results.
-        
         :arg z: atomic number
-        :arg line: x-ray characteristic line (use constant)
+        :type z: :class:`int`
+        
+        :arg line: X-ray characteristic line, either
+            
+            * :data:`LINE_KA`
+            * :data:`LINE_KB`
+            * :data:`LINE_LA`
+            * :data:`LINE_LB`
+            * :data:`LINE_MA`
+            * :data:`LINE_MB`
+            
+            Note that no other X-ray lines are supported.
         :type line: :class:`int`
+        
         :arg energy_eV: beam energy (in eV)
-        :arg kratio: measured k-ratio
+        :type energy_eV: :class:`float`
+        
+        :arg kratio: measured k-ratio (optional)
+        :type kratio: :class:`float`
+        
         :arg standard: three options
         
-            * empty string for pure standard
+            * empty string for pure standard (e.g. ``Fe``)
             * standard name which correspond to the filename of the standard
-              saved in the standard directory
-            * a :class:`.Sample`
+              saved in the standard directory 
+              (see :attr:`Stratagem.standard_directory`)
+            * a :class:`Sample`
             
         :arg analyzed: whether to use this experiment in the calculations
+        :type analyzed: :class:`bool`
         """
         self._z = z
         self._line = line
@@ -90,4 +126,7 @@ class Experiment:
 
     @property
     def standard(self):
+        """
+        REturns the standard.
+        """
         return self._standard
