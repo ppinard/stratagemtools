@@ -8,7 +8,7 @@ Requirements
 
   - Microsoft Windows
   - STRATAGem >= 4.1.0, stratadll.dll >= 4.7.0
-  - Python 3.x
+  - Python 3.x (32-bit, does not work with 64-bit)
 
 and the following Python libraires, which should be automatically installed by
 pip.
