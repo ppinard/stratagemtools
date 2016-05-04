@@ -18,13 +18,12 @@ after_success: codecov
 notifications:
   email: false
 deploy:
-  matrix:
-  - provider: pypi
-    user: philippe.pinard
-    password:
-      secure: sjq8KEEGWcAo6TTYh3MLoX5up+TuuUEFwoVribPVrypZqcSEBHuHyhkQVkjBhwHowfvFa3dxmA163Uk8eHL8J70TKZhoNT+5Eo+IBqreUdVmcN82wQGQ2hdAS82/EVZipMb9eSZt8S8zNxQK0Bey+69rGK4Y2tVF2UwWj4uZsXSuyUKetwUsBvcN0jpjLXt9Wai0x4vd/6NAV9mob0OrViQV8iXuD13JyX4MVe3zd9PQ8YPJkaXNVEjKV7MrbvlNdmH8TmmeEHKv7HmKmJRwVltZ8Nj78vt1E4OAg0V5LvlIzZ9nMlN4ZGer0WuUq4OfJd9zv493luuFhGtMmspvGy4WE8QKYjR1y5r+Q06qxzF0oAG3BkEdIGttjkRvtVyMZYM1gJux1ifAdkU/3hvATekEjqlY1VcT23xZ49xLQQzF3D/TjjpKyy6RXzBr/Nx8t+Dp49TsVmI6LaoFKBbxP+N3G+n4OXm6tc6oeem5Oz/UxAJgEv51UEpTSfJKQQd7Q/VrblPu9XKj3UQqj3aSEGdj8ErWt4x2AVnmLajeRW8J39HIMxZwQG6OmLKs6uCFQx4Xu1TbXd1rZLJmtoTKMPwMmGyqfdE53vkfZCnhmrGgKzkfOXi+pZWt2On1LiHY5yGclmYXqSJiTYcg6Wb53WlOZHIL00kf/Z6dd+jABb4=
-    distributions: sdist bdist_wheel
-    on:
-      tags: true
-      repo: ppinard/stratagemtools
-      condition: $DEPLOY = yes
+  provider: pypi
+  user: philippe.pinard
+  password:
+    secure: sjq8KEEGWcAo6TTYh3MLoX5up+TuuUEFwoVribPVrypZqcSEBHuHyhkQVkjBhwHowfvFa3dxmA163Uk8eHL8J70TKZhoNT+5Eo+IBqreUdVmcN82wQGQ2hdAS82/EVZipMb9eSZt8S8zNxQK0Bey+69rGK4Y2tVF2UwWj4uZsXSuyUKetwUsBvcN0jpjLXt9Wai0x4vd/6NAV9mob0OrViQV8iXuD13JyX4MVe3zd9PQ8YPJkaXNVEjKV7MrbvlNdmH8TmmeEHKv7HmKmJRwVltZ8Nj78vt1E4OAg0V5LvlIzZ9nMlN4ZGer0WuUq4OfJd9zv493luuFhGtMmspvGy4WE8QKYjR1y5r+Q06qxzF0oAG3BkEdIGttjkRvtVyMZYM1gJux1ifAdkU/3hvATekEjqlY1VcT23xZ49xLQQzF3D/TjjpKyy6RXzBr/Nx8t+Dp49TsVmI6LaoFKBbxP+N3G+n4OXm6tc6oeem5Oz/UxAJgEv51UEpTSfJKQQd7Q/VrblPu9XKj3UQqj3aSEGdj8ErWt4x2AVnmLajeRW8J39HIMxZwQG6OmLKs6uCFQx4Xu1TbXd1rZLJmtoTKMPwMmGyqfdE53vkfZCnhmrGgKzkfOXi+pZWt2On1LiHY5yGclmYXqSJiTYcg6Wb53WlOZHIL00kf/Z6dd+jABb4=
+  distributions: sdist bdist_wheel
+  on:
+    tags: true
+    repo: ppinard/stratagemtools
+    condition: $DEPLOY = yes
