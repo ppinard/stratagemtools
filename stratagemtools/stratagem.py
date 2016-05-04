@@ -1,5 +1,9 @@
 """
-Stratagem library
+Main class of the interface.
+It setups the experimental parameters such as the :class:`.Experiment`'s and
+:class:`.Sample`, geometry (:attr:`geometry <Stratagem.geometry>`), type of 
+:math:`\\phi(\\rho z)` model (:attr:`prz_mode <Stratagem.prz_mode>`) and 
+fluorescence mode (:attr:`fluorescence <Stratagem.fluorescence>`).
 """
 
 # Standard library modules.
@@ -49,12 +53,22 @@ _REGISTRY_KEY = "Software\SAMx\Stratagem\Configuration"
 _REGISTRY_VALUENAME = 'InstallOEMDirectory'
 
 PRZMODE_XPP = 0
+""":math:`\\phi(\\rho z)` from XPP"""
+
 PRZMODE_PAP = 1
+""":math:`\\phi(\\rho z)` from PAP"""
+
 PRZMODE_GAU = 2
+""":math:`\\phi(\\rho z)` *unknown*, possibly two Gaussians"""
 
 FLUORESCENCE_NONE = 0
+"""No fluorescence"""
+
 FLUORESCENCE_LINE = 1
+"""Only characteristic fluorescence"""
+
 FLUORESCENCE_LINE_CONT = 2
+"""Characteristic and Bremsstrahlung fluorescence"""
 
 _CONCENTRATION_FLAG_KNOWN = 0
 _CONCENTRATION_FLAG_UNKNOWN = 1
@@ -63,6 +77,9 @@ _CONCENTRATION_FLAG_TRACE = 3
 _CONCENTRATION_FLAG_DIFFERENCE = 4
 
 class StratagemError(Exception):
+    """
+    Exception raised for all errors related to the STRATAGem interface.
+    """
     pass
 
 def _check_key(method):
@@ -74,13 +91,35 @@ def _check_key(method):
     return wrapper
 
 class Stratagem:
+    """
+    Main interface establishing a connection to the STRATAGem OEM interface and
+    perform calculations using SAMx's STRATAGem.
+    It is highly recommended to use :class:`Stratagem` as a context manager 
+    (i.e. ``with`` statement) to ensure that the connection to the DLL is 
+    properly closed.
+    For instance::
+    
+        >>> with Stratagem() as strata:
+        ...     strata.prz_mode = PRZMODE_XPP
+    
+    Otherwise the following series of method must be called::
+    
+        >>> strata = Stratagem()
+        >>> strata.init()
+        >>> strata.prz_mode = PRZMODE_XPP
+        >>> strata.close()
+    """
+
     def __init__(self, dll_path=None, display_error=True):
         """
-        Initializes the connection to the Stratagem DLlogger.
-        One of the following argument must be specified:
+        :arg dll_path: complete path to the location of ``stratadllogger.dll``
+            (optional). If ``None``, the path is found in the Windows registry
+            under ``Software\SAMx\Stratagem\Configuration``. If the DLL is not
+            found a :class:`StratagemError` is raised.
+        :type dll_path: :class:`str`
         
-        :arg configfile: file-object to the configuration file
-        :arg dll_path: complete path to the location of the ``stratadllogger.dll``
+        :arg display_error: whether to display a message dialog on error
+        :type display_error: :class:`bool`
         """
         if dll_path is None:
             with winreg.OpenKey(winreg.HKEY_CURRENT_USER, _REGISTRY_KEY) as key: #@UndefinedVariable
@@ -130,6 +169,11 @@ class Stratagem:
         return key
 
     def _raise_error(self, alternate=''):
+        """
+        Raises a :class:`StratagemError`. 
+        The error code and message of known errors are retrieved from STRATAGem. 
+        If this is not possible, *alternate* is used as the error message.
+        """
         errnum_ = c.c_ulong()
         errtype_ = c.c_int()
 
@@ -149,7 +193,9 @@ class Stratagem:
 
     def init(self):
         """
-        Initializes and setups STRATAGem. 
+        Initializes and setups STRATAGem.
+        It does not have to be used if :class:`Stratagem` is used as a context
+        manager.
         """
         if self._key is not None:
             raise RuntimeError('Already initialized. Call close() first.')
@@ -160,7 +206,9 @@ class Stratagem:
 
     def close(self):
         """
-        Closes the connection to the Statagem DLL.
+        Closes the connection to the STRATAGem DLL.
+        It does not have to be used if :class:`Stratagem` is used as a context
+        manager.
         """
         if self._key is not None:
             logger.debug('StObjectDelete(key)')
@@ -175,7 +223,7 @@ class Stratagem:
 
     def reset(self):
         """
-        Resets all parameters to the defaults, remove all layers and experiments.
+        Resets all parameters to the defaults, remove all experiments and sample.
         """
         if self._key:
             self._lib.StObjectReset(self._key)
@@ -187,6 +235,13 @@ class Stratagem:
 
     @_check_key
     def set_sample(self, sample):
+        """
+        Sets the sample, which will be used in all subsequent calculations.
+        Note that only one sample can be defined.
+        
+        :arg sample: sample definition
+        :type sample: :class:`Sample`
+        """
         self.reset()
 
         for layer in sample.layers:
@@ -198,6 +253,16 @@ class Stratagem:
 
     @_check_key
     def get_sample(self):
+        """
+        Returns the current sample. 
+        It can correspond to the sample defined by :meth:`set_sample` or the
+        sample resulting from the computations (see :meth:`compute`).
+        
+        .. note:: a new sample is returned every time this method is called
+        
+        :return: current sample
+        :rtype: :class:`Sample`
+        """
         sample = Sample(self._substrate[0].composition)
 
         for layer in self._layers:
@@ -206,15 +271,15 @@ class Stratagem:
 
         return sample
 
-    sample = property(get_sample, set_sample)
+    sample = property(get_sample, set_sample, doc="Property to set/get sample")
 
     def _add_layer(self, layer, substrate=False, key=None):
         """
-        Adds a layer from top to bottom. 
+        Internal method to add a layer from top to bottom. 
         The last layer added is considered as the substrate.
         
         :arg layer: layer
-        :type layer: :class:`Layer`
+        :type layer: :class:`.Layer`
         
         :return: index of the layer
         """
@@ -284,6 +349,10 @@ class Stratagem:
         return int(ilayer_)
 
     def _create_standard(self, standard):
+        """
+        Internal method to create a new object defining the standard 
+        :class:`.Sample`.
+        """
         # Create new object
         key_ = self._stobjectnew(standard=True)
 
@@ -311,7 +380,9 @@ class Stratagem:
     @_check_key
     def add_experiment(self, experiment):
         """
-        Add an experiment, measurements of k-ratio at different energies.
+        Adds an experiment, i.e. measurements of k-ratio at different energies.
+        
+        .. hint:: Use :meth:`reset` method to remove defined experiments.
         
         :arg experiment: experiment
         :type experiment: :class:`Experiment`
@@ -357,10 +428,20 @@ class Stratagem:
 
     @_check_key
     def add_experiments(self, *exps):
+        """
+        Adds several experiments::
+        
+            >>> strata.add_experiments(exp1, exp2, exp3)
+        """
         for exp in exps:
             self.add_experiment(exp)
 
     def get_experiments(self):
+        """
+        Returns a :class:`tuple` of all defined experiments.
+        
+        :rtype: :class:`tuple`
+        """
         return tuple(self._experiments.keys())
 
     @_check_key
@@ -397,12 +478,19 @@ class Stratagem:
 
         return toa_.value, tilt_.value, azimuth_.value
 
-    geometry = property(get_geometry)
+    geometry = property(get_geometry, doc='Property to get geometry')
 
     @_check_key
     def set_prz_mode(self, mode):
         """
-        Sets the type of model to use for the phi-rho-z.
+        Sets the type of model to use for the :math:`\\phi(\\rho z)`.
+        
+        :arg mode: type of model, either
+            
+            * :data:`PRZMODE_XPP`
+            * :data:`PRZMODE_PAP`
+            * :data:`PRZMODE_GAU`
+        :type mode: :class:`int`
         """
         mode_ = c.c_int(mode)
         logger.debug('StSetPrzMode(%i)', mode)
@@ -411,17 +499,28 @@ class Stratagem:
     @_check_key
     def get_prz_mode(self):
         """
-        Returns the type of model to use for the phi-rho-z.
+        Returns the type of model to use for the :math:`\\phi(\\rho z)`.
+        
+        :return: either :data:`PRZMODE_XPP`, :data:`PRZMODE_PAP` or 
+            :data:`PRZMODE_GAU`
+        :rtype: :class:`int`
         """
         return self._lib.StGetPrzMode()
 
-    prz_mode = property(get_prz_mode, set_prz_mode)
+    prz_mode = property(get_prz_mode, set_prz_mode,
+                        doc='Property to get/set prz mode')
 
     @_check_key
     def set_fluorescence(self, flag):
         """
-        Sets whether to consider characteristic fluorescence, characteristic
-        and continuum fluorescence or no fluorescence.
+        Sets the fluorescence flag.
+        
+        :arg flag: either 
+            
+            * :data:`FLUORESCENCE_NONE`
+            * :data:`FLUORESCENCE_LINE`
+            * :data:`FLUORESCENCE_LINE_CONT`
+        :type flag: :class:`int`
         """
         flag_ = c.c_int(flag)
         logger.debug('StSetFluorFlg(%i)', flag)
@@ -430,25 +529,41 @@ class Stratagem:
     @_check_key
     def get_fluorescence(self):
         """
-        Returns whether to consider characteristic fluorescence, characteristic
-        and continuum fluorescence or no fluorescence.
+        Returns the fluorescence flag.
+        
+        :return: either :data:`FLUORESCENCE_NONE`, :data:`FLUORESCENCE_LINE`
+            or :data:`FLUORESCENCE_LINE_CONT`
+        :rtype: :class:`int`
         """
         return self._lib.StGetFluorFlg()
 
-    fluorescence = property(get_fluorescence, set_fluorescence)
+    fluorescence = property(get_fluorescence, set_fluorescence,
+                            doc='Property to get/set fluorescence')
 
     @_check_key
     def set_standard_directory(self, dirpath):
+        """
+        Sets the directory where standard files are stored.
+        
+        :arg dirpath: path to directory
+        :type dirpath: :class:`str`
+        """
         dirpath_ = c.create_string_buffer(dirpath.encode('ascii'))
         self._lib.StSetDirectory(c.c_int(1), dirpath_)
 
     @_check_key
     def get_standard_directory(self):
+        """
+        Returns the directory where standard files are stored.
+        
+        :rtype: :class:`str`
+        """
         dirpath = (c.c_char * 256)()
         self._lib.StGetDirectory(c.c_int(1), c.byref(dirpath), 256)
         return dirpath.value.decode('ascii')
 
-    standard_directory = property(get_standard_directory, set_standard_directory)
+    standard_directory = property(get_standard_directory, set_standard_directory,
+                                  doc='Property to get/set standard directory')
 
     @_check_key
     def compute_kratio_vs_thickness(self, layer,
@@ -457,12 +572,24 @@ class Stratagem:
         Computes the variation of the k-ratio as a function of the thickness 
         for a layer.
         
-        :arg layer: layer (must have been previously added)
-        :arg thickness_low_m: lower limit of the thickness (in nm)
-        :arg thickness_high: upper limit of the thickness (in nm)
-        :arg step: number of steps
+        :arg layer: layer of a sample (must have been previously added)
+        :type layer: :class:`.Layer`
         
-        :return: :class:`list` of thicknesses, :class:`dict` of experiment-kratios
+        :arg thickness_low_m: lower limit of the thickness in meters
+        :type thickness_low_m: :class:`float`
+        
+        :arg thickness_high_m: upper limit of the thickness in meters
+        :type thickness_high_m: :class:`float`
+        
+        :arg step: number of steps
+        :type step: :class:`int`
+        
+        :return: :class:`tuple` containing
+            
+            * :class:`list` of thicknesses
+            * :class:`dict` where the keys are experiments (as defined by
+              :meth:`.add_experiment`) and the values are :class:`list` 
+              containing k-ratios for each thickness
         """
         logger.debug('StSetKvsThicknessUnit(2)')
         self._lib.StSetKvsThicknessUnit(2) # unit in nm
@@ -516,10 +643,18 @@ class Stratagem:
         energy. 
         Note that the computation also starts at 0 keV up to the specified energy.
         
-        :arg energy_high: upper limit of the thickness (in eV)
-        :arg step: number of steps
+        :arg energy_high_eV: upper limit of the thickness in electronvolts
+        :type energy_high_eV: :class:`float`
         
-        :return: :class:`list` of energies, :class:`dict` of experiment-kratios
+        :arg step: number of steps
+        :type step: :class:`int`
+        
+        :return: :class:`tuple` containing
+            
+            * :class:`list` of energies in electronvolts
+            * :class:`dict` where the keys are experiments (as defined by
+              :meth:`.add_experiment`) and the values are :class:`list` 
+              containing k-ratios for each energy
         """
         step_ = c.c_int(step)
         logger.debug('StSetNbComputedHV(%i)', step)
@@ -562,9 +697,11 @@ class Stratagem:
     @_check_key
     def compute_kratios(self):
         """
-        Computes the kratios of the different experiments.
+        Computes the k-ratios of the different experiments.
         
-        :return: :class:`dict` of experiment-kratios
+        :return: :class:`dict` where the keys are experiments (as defined by
+            :meth:`.add_experiment`) and the values are k-ratios 
+            (:class:`float`).
         """
         if len(self._layers) == 0:
             return self._compute_kratios_substrate()
@@ -574,7 +711,8 @@ class Stratagem:
     @_check_key
     def _compute_kratios_multilayers(self):
         """
-        Computes the kratios using the :meth:`compute_kratio_vs_thickness`.
+        Internal method to compute the k-ratios using the 
+        :meth:`compute_kratio_vs_thickness`.
         """
         for i, layer in enumerate(self._layers.keys()):
             if not layer.is_thickness_known():
@@ -600,7 +738,8 @@ class Stratagem:
     @_check_key
     def _compute_kratios_substrate(self):
         """
-        Computes the kratios using the :meth:`compute_kratio_vs_energy`.
+        Internal method to compute the k-ratios using the 
+        :meth:`compute_kratio_vs_energy`.
         """
         output = {}
 
@@ -625,9 +764,15 @@ class Stratagem:
     @_check_key
     def compute(self, iteration_max=50):
         """
-        Computes the thicknesses of each layer.
+        Computes the unknown composition(s) and thickness(es) in the specified
+        sample.
         
-        :return: :class:`.Sample`
+        :arg iteration_max: maximum number of iterations of the solve
+            (default: 50)
+        :type iteration_max: :class:`int`
+        
+        :return: calculated sample
+        :rtype: :class:`.Sample`
         """
         # Add missing experiments
         zs = set(exp.z for exp in self._experiments.keys())
@@ -718,13 +863,11 @@ class Stratagem:
         """
         Compute :math:`\\phi(\\rho z)` of all experiments.
         
-        .. warning::
-        
-           Only available for substrate (no layers).
+        .. warning:: Only available for substrate (no layers).
         
         :arg maxdepth_m: maximum depth of the :math:`\\phi(\\rho z)` 
-          distribution in meters. If ``None``, Kanaya-Okayama electron range
-          is used with a safety factor of 1.5.
+            distribution in meters. If ``None``, Kanaya-Okayama electron range
+            is used with a safety factor of 1.5.
         :type maxdepth_m: :class:`float`
         
         :arg bins: number of bins in the :math:`\\phi(\\rho z)` distribution
@@ -733,7 +876,7 @@ class Stratagem:
         :return: a :class:`dict` where the keys are the experiments and the 
             values are a tuple containing three lists:
             
-                * :math:`\rho z` coordinates (in g/cm2)
+                * :math:`\\rho z` coordinates (in g/cm2)
                 * generated intensities of :math:`\\phi(\\rho z)` (no absorption)
                 * emitted intensites of :math:`\\phi(\\rho z)`
         """

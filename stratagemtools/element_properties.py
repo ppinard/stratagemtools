@@ -1,8 +1,10 @@
 """
-Various properties of atoms
-
 .. codeauthor:: Hendrix Demers <hendrix.demers@mail.mcgill.ca>
+
+Various properties of atoms.
 """
+
+__all__ = ['symbol', 'atomic_number', 'mass_density_kg_m3', 'atomic_mass_kg_mol']
 
 # Standard library modules.
 
@@ -71,6 +73,10 @@ def symbol(z):
     Returns the element's symbol.
 
     :arg z: atomic number
+    :type z: :class:`int`
+    
+    :return: symbol
+    :rtype: :class:`str`
     """
     try:
         return _SYMBOLS[z - 1]
@@ -79,10 +85,14 @@ def symbol(z):
 
 def atomic_number(symbol):
     """
-    Returns the atomic number for the specified symbol.
+    Returns the atomic number for the specified *symbol*.
     This function is case insensitive.
 
     :arg symbol: symbol of the element (e.g. ``C``)
+    :type symbol: :class:`str`
+    
+    :return: atomic number
+    :rtype: :class:`int`
     """
     try:
         return _SYMBOLS.index(symbol.capitalize()) + 1
@@ -90,6 +100,16 @@ def atomic_number(symbol):
         raise ValueError("Unknown symbol: %s" % symbol)
 
 def mass_density_kg_m3(z):
+    """
+    Returns the mass density in kilograms per cubic meter for the specified
+    atomic number.
+    
+    :arg z: atomic number
+    :type z: :class:`int`
+    
+    :return: mass density
+    :rtype: :class:`float`
+    """
     if z == 85 or z == 87:
         raise ValueError("No mass density for atomic number: %i." % z)
     if z < 0 or z > 96:
@@ -101,6 +121,16 @@ def mass_density_kg_m3(z):
         return ValueError("No mass density for atomic number: %i." % z)
 
 def atomic_mass_kg_mol(z):
+    """
+    Returns the atomic molar mass in kilograms per mol for the specified
+    atomic number.
+    
+    :arg z: atomic number
+    :type z: :class:`int`
+    
+    :return: atomic molar mass
+    :rtype: :class:`float`
+    """
     if z < 0 or z > 96:
         raise ValueError("No mass density for atomic number: %i." % z)
 
